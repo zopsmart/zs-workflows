@@ -27,9 +27,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-#      - name: Add image env property with commit sha tag
-#        run: echo "image=`echo gcr.io/${{ env.project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> $GITHUB_ENV
-
       - name: Install Helm
         uses: azure/setup-helm@v3
         id: install
