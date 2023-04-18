@@ -1,0 +1,15 @@
+name: '<app_name>'
+project_name: '<project_name>'
+cluster_name: '<cluster_name>'
+DB_NAME: '<db_name>'  # if service do not require a DB, field can be ignored
+DB_DIALECT: '<db_dialect>' # if service do not require a DB, field can be ignored
+DB_USER: '<db_user>' # if service do not require a DB, field can be ignored
+
+minMemory: '<minMemory>' # default value "128Mi"
+maxMemory: '<maxMemory>' # default value "512Mi"
+maxCPU: '<maxCPU >' # default value "500m"
+
+env:
+  cloud: '<cloud-provider>'
+  TRACER_URL: '<required-tracer-url>'  # url values changes depending on the environment
+  TRACER_EXPORTER: '<tracer-exporter>'
