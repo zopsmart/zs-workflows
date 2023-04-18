@@ -1,2 +1,2 @@
 # App Template
-contains application deployment templates along with required helm values
+This repository contains application deployment templates along with required helm values
