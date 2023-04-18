@@ -53,4 +53,4 @@ jobs:
         run: gcloud container clusters get-credentials headless-services-dev  --region=us-east4 --project=zopsmart-poc
 
       - name: Update Deployment Image
-        run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./gcp-values.yaml -n ${{ env.namespace }}
+        run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./values.yaml -n ${{ env.namespace }}
