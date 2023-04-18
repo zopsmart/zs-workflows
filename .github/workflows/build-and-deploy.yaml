@@ -101,7 +101,7 @@ jobs:
     needs: dockerize
     name: Deploy
     env:
-      image: ${{jobs.dockerize.outputs.image}}
+      image: ${{needs.dockerize.outputs.image}}
 
     if: github.ref == 'refs/heads/workflow' && (github.event_name == 'push')
     steps:
