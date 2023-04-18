@@ -10,7 +10,6 @@ on:
 env:
   app_name: '<app_name>'
   GOPRIVATE: developer.zopsmart.com/go/gofr
-  project_name: '<project_name>'
   namespace: '<namespace>'
 
 
@@ -19,14 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: dockerize
     name: Deploy
+    env:
+      image: ${{needs.dockerize.outputs.image}}
+
     if: github.ref == 'refs/heads/workflow' && (github.event_name == 'push')
     steps:
 
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Add image env property with commit sha tag
-        run: echo "image=`echo gcr.io/${{ env.project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> $GITHUB_ENV
+#      - name: Add image env property with commit sha tag
+#        run: echo "image=`echo gcr.io/${{ env.project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> $GITHUB_ENV
 
       - name: Install Helm
         uses: azure/setup-helm@v3
