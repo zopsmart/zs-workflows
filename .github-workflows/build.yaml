@@ -8,10 +8,7 @@ on:
       - "workflow"
 
 env:
-  app_name: '<app_name>'
-  GOPRIVATE: developer.zopsmart.com/go/gofr
-  project_name: '<project_name>'
-  namespace: '<namespace>'
+   GOPRIVATE: developer.zopsmart.com/go/gofr
 
 jobs:
   build:
