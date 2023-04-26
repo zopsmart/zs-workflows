@@ -3,14 +3,12 @@ name: Build and Deploy sample-api
 on:
   push:
     branches:
-      - "main"
       - "development"
-      - "workflow"
 
 env:
   app_name: '<app_name>'
   cluster_name: '<cluster_name>'
-  gcr_project: '<gcr_project>'
+  cluster_project_name: '<cluster_project_name>'
   project_name: '<project_name>'
   namespace: '<namespace>'
   GOPRIVATE: developer.zopsmart.com/go/gofr
@@ -31,7 +29,7 @@ jobs:
 
       - name: Fetch dependencies
         run: |
-          git config --global url."https://${{ secrets.GHA_PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
           git config --global http.sslVerify false
           go get -v -t -d ./...
       - name: Make Directory
@@ -93,9 +91,9 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          tags: gcr.io/${{ env.gcr_project}}/${{ env.app_name }}:${{ github.sha }}
+          tags: gcr.io/${{ env.cluster_project_name}}/${{ env.app_name }}:${{ github.sha }}
       - id: output-image
-        run: echo "image=`echo gcr.io/${{ env.gcr_project }}/${{ env.app_name }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo gcr.io/${{ env.cluster_project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
 
   deployment:
     runs-on: ubuntu-latest
@@ -104,7 +102,7 @@ jobs:
     env:
       image: ${{needs.dockerize.outputs.image}}
 
-    if: github.ref == 'refs/heads/workflow' && (github.event_name == 'push')
+    if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
     steps:
 
       - name: Checkout Code
