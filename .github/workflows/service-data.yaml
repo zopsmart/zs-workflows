@@ -1,0 +1,218 @@
+name: Build and Deploy remote-config-data
+
+on:
+  push:
+    branches:
+      - "development"
+
+env:
+  app_name: '<app_name>'
+  cluster_name: '<cluster_name>'
+  cluster_project_name: '<cluster_project_name>'
+  gcr_project_name: '<project_name>'
+  namespace: '<namespace>'
+  DB_NAME: '<db_name>'
+  DB_DIALECT: '<db_dialect>'
+  DB_USER: '<db_user>'
+
+  GOPRIVATE: developer.zopsmart.com/go/gofr
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.30
+        ports:
+          - "3306:3306"
+        env:
+          MYSQL_ROOT_PASSWORD: "password"
+      redis:
+        image: redis:5.0.14
+        ports:
+          - "6379:6379"
+        options: "--entrypoint redis-server"
+      zipkin:
+        image: openzipkin/zipkin
+        ports:
+          - "9411:9411"
+      elasticsearch:
+        image: elasticsearch:6.8.6
+        ports:
+          - 2012:9200
+          - 2013:9300
+          - 9200:9200
+        env:
+          discovery type: "single-node"
+      kafka:
+        image: krisgeus/docker-kafka
+        ports:
+          - 2008:2008
+          - 2009:2009
+        env:
+          ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:2008,INTERNAL://localhost:2009'
+          LISTENERS: 'PLAINTEXT://0.0.0.0:2008,INTERNAL://0.0.0.0:2009'
+          SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT'
+          INTER_BROKER: 'INTERNAL'
+          KAFKA_CREATE_TOPICS: 'test-topic'
+          KAFKA_HOSTS: 'localhost:2008,localhost:2009'
+          KAFKA_TOPIC: 'test-topic'
+
+      mongo:
+        image: mongo:6.0.2
+        ports:
+          - "27017:27017"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin123
+
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+          - "1433:1433"
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: reallyStrongPwd123
+
+      dynamodb:
+        image: amazon/dynamodb-local
+        ports:
+          - "2021:8000"
+
+      postgres:
+        image: postgres:15.1
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
+      cassandra:
+        image: cassandra:4.0.6
+        ports:
+          - 9041:9042
+        options: --health-cmd "cqlsh --debug"
+
+      
+
+    steps:
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+          id: Go
+
+      - name: Checkout code into go module directory
+        uses: actions/checkout@v2
+
+      - name: Fetch dependencies
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
+          git config --global http.sslVerify false
+          go mod tidy
+
+      - name: Make Directory
+        run: mkdir build
+
+      - name: Test
+        run: |
+          export GOFR_ENV=test
+          go test ./... -short -v -coverprofile build/coverage.txt -coverpkg=./...
+          go tool cover -func build/coverage.txt
+
+      - name: Setup linter
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1
+          golangci-lint --version
+      - name: Linter Check
+        run: |
+          golangci-lint run --timeout 5m0s
+
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: main
+
+  dockerize:
+    runs-on: ubuntu-latest
+    name: Dockerize
+    needs: build
+
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: artifacts
+
+      - name: change permission
+        run: chmod a+x main
+
+      - name: Login to GCR
+        uses: docker/login-action@v1
+        with:
+          registry: gcr.io
+          username: _json_key
+          password: ${{ secrets.GCR_KEY }}
+
+      - name: Build and Push Docker Image to GCR
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ./Dockerfile
+          tags: gcr.io/${{ env.gcr_project_name }}/${{ env.app_name }}:${{ github.sha }}
+      - id: output-image
+        run: echo "image=`echo gcr.io/${{ env.gcr_project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+
+  deployment:
+    runs-on: ubuntu-latest
+    needs: dockerize
+    name: Deploy
+    env:
+      image: ${{needs.dockerize.outputs.image}}
+
+    if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        id: install
+
+      - name: Setup Helm Chart
+        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+
+      - name: Verify
+        run: ls -la
+      - name: Directory
+        run: pwd
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: zopsmart-poc
+          service_account_key: ${{ secrets.DEPLOY_KEY }}
+          export_default_credentials: true
+
+      - name: Update Kubectl component
+        run: gcloud --quiet components update kubectl
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ env.cluster_name }}  --region=us-east4 --project=${{ env.cluster_project_name}}
+
+      - name: Update Deployment Image
+        run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./values.yaml -n ${{ env.namespace }}

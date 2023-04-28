@@ -3,16 +3,15 @@ name: Build and Deploy sample-api
 on:
   push:
     branches:
-      - "main"
       - "development"
-      - "workflow"
 
 env:
   app_name: '<app_name>'
-  GOPRIVATE: developer.zopsmart.com/go/gofr
-  project_name: '<project_name>'
+  cluster_name: '<cluster_name>'
+  cluster_project_name: '<cluster_project_name>'
+  gcr_project_name: '<project_name>'
   namespace: '<namespace>'
-
+  GOPRIVATE: developer.zopsmart.com/go/gofr
 
 jobs:
   build:
@@ -30,10 +29,9 @@ jobs:
 
       - name: Fetch dependencies
         run: |
-          git config --global url."https://${{ secrets.GHA_PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
           git config --global http.sslVerify false
           go get -v -t -d ./...
-
       - name: Make Directory
         run: mkdir build
 
@@ -43,20 +41,16 @@ jobs:
           go test ./... -short -v -coverprofile build/coverage.txt -coverpkg=./...
           cat build/coverage.txt  > build/coverage.out
           go tool cover -func build/coverage.out
-
       - name: Setup linter
         run: |
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1
           golangci-lint --version
-
       - name: Linter Check
         run: |
           golangci-lint run --timeout 5m0s
-
       - name: Build
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -67,6 +61,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Dockerize
     needs: build
+
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+
     if: github.event_name == 'push'
     steps:
       - name: Checkout Code
@@ -93,20 +91,22 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          tags: gcr.io/${{ env.project_name }}/${{ env.app_name }}:${{ github.sha }}
+          tags: gcr.io/${{ env.gcr_project_name}}/${{ env.app_name }}:${{ github.sha }}
+      - id: output-image
+        run: echo "image=`echo gcr.io/${{ env.gcr_project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
 
   deployment:
     runs-on: ubuntu-latest
     needs: dockerize
     name: Deploy
-    if: github.ref == 'refs/heads/workflow' && (github.event_name == 'push')
+    env:
+      image: ${{needs.dockerize.outputs.image}}
+
+    if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
     steps:
 
       - name: Checkout Code
         uses: actions/checkout@v2
-
-      - name: Add image env property with commit sha tag
-        run: echo "image=`echo gcr.io/${{ env.project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> $GITHUB_ENV
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -131,7 +131,7 @@ jobs:
         run: gcloud --quiet components update kubectl
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials headless-services-dev  --region=us-east4 --project=zopsmart-poc
+        run: gcloud container clusters get-credentials ${{ env.cluster_name }} --region=us-east4 --project=${{ env.cluster_project_name }}
 
       - name: Update Deployment Image
-        run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./gcp-values.yaml -n ${{ env.namespace }}
+        run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./values.yaml -n ${{ env.namespace }}
