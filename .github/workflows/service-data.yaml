@@ -21,20 +21,79 @@ jobs:
   build:
     runs-on: ubuntu-latest
     services:
+      mysql:
+        image: mysql:8.0.30
+        ports:
+          - "3306:3306"
+        env:
+          MYSQL_ROOT_PASSWORD: "password"
+      redis:
+        image: redis:5.0.14
+        ports:
+          - "6379:6379"
+        options: "--entrypoint redis-server"
+      zipkin:
+        image: openzipkin/zipkin
+        ports:
+          - "9411:9411"
+      elasticsearch:
+        image: elasticsearch:6.8.6
+        ports:
+          - 2012:9200
+          - 2013:9300
+          - 9200:9200
+        env:
+          discovery type: "single-node"
+      kafka:
+        image: krisgeus/docker-kafka
+        ports:
+          - 2008:2008
+          - 2009:2009
+        env:
+          ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:2008,INTERNAL://localhost:2009'
+          LISTENERS: 'PLAINTEXT://0.0.0.0:2008,INTERNAL://0.0.0.0:2009'
+          SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT'
+          INTER_BROKER: 'INTERNAL'
+          KAFKA_CREATE_TOPICS: 'test-topic'
+          KAFKA_HOSTS: 'localhost:2008,localhost:2009'
+          KAFKA_TOPIC: 'test-topic'
+
+      mongo:
+        image: mongo:6.0.2
+        ports:
+          - "27017:27017"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin123
+
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+          - "1433:1433"
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: reallyStrongPwd123
+
+      dynamodb:
+        image: amazon/dynamodb-local
+        ports:
+          - "2021:8000"
+
       postgres:
         image: postgres:15.1
         ports:
-          - "5432:5432"
+          - 5432:5432
         env:
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_USER: ${{ env.DB_USER }}
-          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
+      cassandra:
+        image: cassandra:4.0.6
+        ports:
+          - 9041:9042
+        options: --health-cmd "cqlsh --debug"
 
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+      
 
     steps:
       - name: Set up Go 1.19
