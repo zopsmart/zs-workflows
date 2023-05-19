@@ -1,4 +1,4 @@
-name: Build and Deploy sample-api
+name: Build and Deploy Rlog-web
 
 on:
   push:
@@ -8,55 +8,45 @@ on:
 
 env:
   app_name: '<app_name>'
-  cluster_name: '<cluster_name>'
-  cluster_project_name: '<cluster_project_name>'
   gcr_project_name: '<project_name>'
   namespace: '<namespace>'
-  GOPRIVATE: developer.zopsmart.com/go/gofr
+  cluster_name: '<cluster_name>'
+  cluster_project_name: '<cluster_project_name>'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/development' && github.event_name == 'push')
     steps:
-
-      - name: Set up Go 1.19
-        uses: actions/setup-go@v2
+      - name: Set Node.js 16.x
+        uses: actions/setup-node@v3
         with:
-          go-version: 1.19
-          id: Go
+          node-version: 16.x
 
-      - name: Checkout code into go module directory
+      - name: Checkout code into node module directory
         uses: actions/checkout@v2
 
       - name: Fetch dependencies
         run: |
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
           git config --global http.sslVerify false
-          go get -v -t -d ./...
+          yarn install
+
       - name: Make Directory
         run: mkdir build
 
-      - name: Test
-        run: |
-          export GOFR_ENV=test
-          go test ./... -short -v -coverprofile build/coverage.txt -coverpkg=./...
-          cat build/coverage.txt  > build/coverage.out
-          go tool cover -func build/coverage.out
-      - name: Setup linter
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1
-          golangci-lint --version
-      - name: Linter Check
-        run: |
-          golangci-lint run --timeout 5m0s
       - name: Build
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifacts
-          path: main
+          yarn build
+
+      - name: Test
+        run: |
+          yarn test
+
+      - name: Linter Check
+        run: |
+          yarn lint
 
   dockerize:
     runs-on: ubuntu-latest
@@ -71,13 +61,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: artifacts
-
-      - name: change permission
-        run: chmod a+x main
+      - name: create env file
+        run: |
+          touch .env
+          echo "NEXT_PUBLIC_BACKEND_BASE_URL=$RLOG_BACKEND_BASE_URL" >> .env
+          echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" >> .env
+          echo "NEXTAUTH_URL=$NEXTAUTH_URL" >> .env
+          echo "GOOGLE_CLIENT_ID=${{fromJSON(secrets.OAUTH_KEY).web.client_id}}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{fromJSON(secrets.OAUTH_KEY).web.client_secret}}" >> .env
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=$NEXT_PUBLIC_REACT_APP_VERSION" >> .env
+          echo "NEXT_PUBLIC_REACT_APP_RLOG_API_KEY=$NEXT_PUBLIC_REACT_APP_RLOG_API_KEY" >> .env
 
       - name: Login to GCR
         uses: docker/login-action@v1
@@ -92,7 +85,7 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          tags: gcr.io/${{ env.gcr_project_name}}/${{ env.app_name }}:${{ github.sha }}
+          tags: gcr.io/${{ env.gcr_project_name }}/${{ env.app_name }}:${{ github.sha }}
       - id: output-image
         run: echo "image=`echo gcr.io/${{ env.gcr_project_name }}/${{ env.app_name }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
 
@@ -105,7 +98,6 @@ jobs:
 
     if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
     steps:
-
       - name: Checkout Code
         uses: actions/checkout@v2
 
@@ -124,7 +116,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: zopsmart-poc
+          project_id: ${{env.cluster_project_name}}
           service_account_key: ${{ secrets.DEPLOY_KEY }}
           export_default_credentials: true
 
@@ -132,7 +124,7 @@ jobs:
         run: gcloud --quiet components update kubectl
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials ${{ env.cluster_name }} --region=us-east4 --project=${{ env.cluster_project_name }}
+        run: gcloud container clusters get-credentials ${{ env.cluster_name }}  --region=us-east4 --project=${{ env.cluster_project_name }}
 
       - name: Update Deployment Image
         run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./values.yaml -n ${{ env.namespace }}

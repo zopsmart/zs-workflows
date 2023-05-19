@@ -2,8 +2,9 @@ name: Build and Deploy remote-config-data
 
 on:
   push:
-    branches:
-      - "development"
+    branches: [ development ]
+  pull_request:
+    branches: [ development ]
 
 env:
   app_name: '<app_name>'
@@ -146,7 +147,7 @@ jobs:
     outputs:
       image: ${{ steps.output-image.outputs.image }}
 
-    if: github.event_name == 'push'
+    if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2

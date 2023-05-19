@@ -1,8 +1,10 @@
 name: '<app_name>'
 cluster_name: '<cluster_name>'
-DB_NAME: '<db_name>'  # if service do not require a DB, field can be ignored
-DB_DIALECT: '<db_dialect>' # if service do not require a DB, field can be ignored
-DB_USER: '<db_user>' # if service do not require a DB, field can be ignored
+
+db_env:
+  DB_NAME: '<db_name>'  # if service do not require a DB, field can be ignored
+  DB_DIALECT: '<db_dialect>' # if service do not require a DB, field can be ignored
+  DB_USER: '<db_user>' # if service do not require a DB, field can be ignored
 
 minMemory: '<minMemory>' # default value "128Mi"
 maxMemory: '<maxMemory>' # default value "512Mi"
