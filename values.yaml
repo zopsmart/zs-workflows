@@ -11,6 +11,7 @@ maxMemory: '<maxMemory>' # default value "512Mi"
 maxCPU: '<maxCPU >' # default value "500m"
 
 #secret_key_reference: "" should be given if no database is being used
+#config_map_reference: "" should be given if no database is being used
 
 env:
   cloud: '<cloud-provider>'
