@@ -9,10 +9,10 @@ env:
   GOPRIVATE: developer.zopsmart.com/go/gofr
 
   app_name: ${{ vars.APP_NAME }}
-  gar_project_name: ${{ vars.GAR_PROJECT }}
   namespace: ${{ vars.NAMESPACE }}
   cluster_name: ${{ vars.CLUSTER_NAME }}
   cluster_project_name: ${{ vars.CLUSTER_PROJECT }}
+  gar_project_name: ${{ vars.GAR_PROJECT }}
   registry_name: ${{ vars.GAR_REGISTRY }}
 
 jobs:
