@@ -9,10 +9,10 @@ env:
   GOPRIVATE: developer.zopsmart.com/go/gofr
 
   app_name: ${{ vars.APP_NAME }}
-  gar_project_name: ${{ vars.GAR_PROJECT }}
   namespace: ${{ vars.NAMESPACE }}
   cluster_name: ${{ vars.CLUSTER_NAME }}
   cluster_project_name: ${{ vars.CLUSTER_PROJECT }}
+  gar_project_name: ${{ vars.GAR_PROJECT }}
   registry_name: ${{ vars.GAR_REGISTRY }}
 
 jobs:
@@ -135,6 +135,20 @@ jobs:
         with:
           name: artifacts
           path: main
+
+      - name: Run Server
+        run: go run main.go &
+
+      - name: Delay for Server Startup
+        run: sleep 5
+
+      - name: Install newman and Run Postman Collection
+        run: |
+          npm install -g newman
+          newman run postman-collection/website-service.postman_collection.json
+
+      - name: Stop Server
+        run: pkill main
 
   dockerize:
     runs-on: ubuntu-latest
