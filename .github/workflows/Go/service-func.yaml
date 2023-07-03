@@ -18,8 +18,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
 
+    if: github.event_name == 'pull_request' || ( (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push')
+
+    steps:
       - name: Set up Go 1.19
         uses: actions/setup-go@v2
         with:
@@ -38,12 +40,31 @@ jobs:
       - name: Make Directory
         run: mkdir build
 
-      - name: Test
+      - name: Test Coverage report
         run: |
           export GOFR_ENV=test
-          go test ./... -short -v -coverprofile build/coverage.txt -coverpkg=./...
-          cat build/coverage.txt  > build/coverage.out
-          go tool cover -func build/coverage.out
+          go test ./... -v -coverprofile ./coverage.txt -coverpkg=./...
+          cat ./coverage.txt | grep -v "mock_interfaces" > ./coverage.out
+          go tool cover -func ./coverage.out | tee ./c.out
+
+      - name: Test Coverage Output
+        run: |
+          cat ./c.out
+
+      - name: Generate and Commit Coverage Badge
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') }}
+        run: |
+          go install github.com/AlexBeauchemin/gobadge@latest
+          gobadge -filename=./c.out -target=$(pwd)/README.md
+          git config --local user.email "action@github.com" && git config --local user.name "GitHub-Action"
+          git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md" 
+
+      - name: Push Coverage Badge
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') }}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{github.ref}}
 
       - name: Setup linter
         run: |
@@ -86,7 +107,8 @@ jobs:
     outputs:
       image: ${{ steps.output-image.outputs.image }}
 
-    if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -124,7 +146,8 @@ jobs:
     env:
       image: ${{needs.dockerize.outputs.image}}
 
-    if: github.ref == 'refs/heads/development' && (github.event_name == 'push')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
