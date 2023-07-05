@@ -30,7 +30,7 @@ These variables are set by terraform code as action variable and secrets
 | cluster_name             | string       | Required          | Name of the Cluster                                       | nil     |
 | cluster_project_name     | string       | Required          | Name of the GCP project                                   | nil     |
 | gar_project_name         | string       | Required          | Name of the Google Artifact Registry project              | nil     |
-| registry_name            | string       | Required          | Name of the Google Artifact Registry name                 | nil     |
+| registry_name            | string       | Required          | Name of the Google Artifact Registry                      | nil     |
 
 #### Workflow Secrets
 
