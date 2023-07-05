@@ -16,10 +16,9 @@ env:
   registry_name: ${{ vars.GAR_REGISTRY }}
 
 jobs:
-  build:
+  unit-test:
+    name: 🧪 Unit Tests
     runs-on: ubuntu-latest
-
-    if: github.event_name == 'pull_request' || ( (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push')
 
     services:
       mysql:
@@ -100,6 +99,92 @@ jobs:
         options: --health-cmd "cqlsh --debug"
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.17.3
+
+      - name: Get dependencies
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+          go get -v -t -d ./...
+
+      - name: Test
+        run: |
+          mkdir -p $artifact_directory/build
+          go test ./... -count=1 -v -coverprofile $artifact_directory/cover.out -coverpkg=./...
+          cat $artifact_directory/cover.out | grep -v "mock_interface" | grep -v "migrations" > $artifact_directory/coverage.out
+
+      - name: Test Coverage report
+        run: |
+          go tool cover -func=$artifact_directory/coverage.out | tee $artifact_directory/c.out
+
+      - name: Generate and Commit Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        run: |
+          go install github.com/AlexBeauchemin/gobadge@latest
+          gobadge -filename=$artifact_directory/c.out -target=$(pwd)/README.md
+          git config --local user.email "action@github.com" && git config --local user.name "GitHub-Action"
+          git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md" 
+
+      - name: Push Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{github.ref}}
+
+      - name: Coverage Quality Gate
+        env:
+          TESTCOVERAGE_THRESHOLD: 72.4
+        run: |
+          echo "Quality Gate: checking test coverage is above threshold ..."
+          echo "Threshold             : $TESTCOVERAGE_THRESHOLD %"
+          totalCoverage=`go tool cover -func=$artifact_directory/coverage.out | grep 'total:' | grep -Eo '[0-9]+\.[0-9]+'`
+          echo "Current test coverage : $totalCoverage %"
+          if (( $(echo "$totalCoverage $TESTCOVERAGE_THRESHOLD" | awk '{print ($1 >= $2)}') )); then
+              echo "OK"
+          else
+              echo "Current test coverage is below threshold. Please add more unit tests or adjust threshold to a lower value."
+              echo "Failed"
+              exit 1
+          fi
+
+  code_quality:
+    name: 🎖 Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.17.3
+          cache: false
+
+      - name: Setup Git
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+          args: --timeout 8m
+
+  build:
+    runs-on: ubuntu-latest
+    name: 🔨 Build
+
+    if: github.event_name == 'pull_request' || ( (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push')
+
+    steps:
       - name: Set up Go 1.19
         uses: actions/setup-go@v2
         with:
@@ -114,44 +199,6 @@ jobs:
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/zopsmart".insteadOf "https://github.com/zopsmart"
           git config --global http.sslVerify false
           go mod tidy
-
-      - name: Make Directory
-        run: mkdir build
-
-      - name: Test Coverage report
-        run: |
-          export GOFR_ENV=test
-          go test ./... -v -coverprofile ./coverage.txt -coverpkg=./...
-          cat ./coverage.txt | grep -v "mock_interfaces" > ./coverage.out
-          go tool cover -func ./coverage.out | tee ./c.out
-
-      - name: Test Coverage Output
-        run: |
-          cat ./c.out
-
-      - name: Generate and Commit Coverage Badge
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') }}
-        run: |
-          go install github.com/AlexBeauchemin/gobadge@latest
-          gobadge -filename=./c.out -target=$(pwd)/README.md
-          git config --local user.email "action@github.com" && git config --local user.name "GitHub-Action"
-          git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md" 
-
-      - name: Push Coverage Badge
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') }}
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ github.token }}
-          branch: ${{github.ref}}
-
-      - name: Setup linter
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1
-          golangci-lint --version
-
-      - name: Linter Check
-        run: |
-          golangci-lint run --timeout 5m0s
 
       - name: Build
         run: |
@@ -179,7 +226,7 @@ jobs:
 
   dockerize:
     runs-on: ubuntu-latest
-    name: Dockerize
+    name: 🐳 Dockerize
     needs: build
 
     outputs:
@@ -220,7 +267,7 @@ jobs:
   deployment:
     runs-on: ubuntu-latest
     needs: dockerize
-    name: Deploy
+    name: 🚀 Deploy
     env:
       image: ${{needs.dockerize.outputs.image}}
 
