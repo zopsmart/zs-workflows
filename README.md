@@ -31,3 +31,10 @@ These variables are set by terraform code as action variable and secrets
 | cluster_project_name     | string       | Required          | Name of the GCP project                                   | nil     |
 | gar_project_name         | string       | Required          | Name of the Google Artifact Registry project              | nil     |
 | registry_name            | string       | Required          | Name of the Google Artifact Registry name                 | nil     |
+
+#### Workflow Secrets
+
+| Secret      | Description                          |
+|-------------|--------------------------------------|
+| PAT         | Github PAT with required permissions |
+| DEPLOY_KEY  | GCP service account credential       |
