@@ -11,7 +11,7 @@ This repository contains application deployment templates along with required he
 | minCPU               | string    | Optional          | Minimum CPU resources                                                                     | `"250m"`               |
 | minMemory            | string    | Optional          | Minimum Memory resources                                                                  | `"128Mi"`              |
 | minReplicas          | number    | Optional          | Minimum replicas                                                                          | `2`                    |
-| name                 | string    | Required          | name of the service to be deployed(should be same as service provided at namespace level) | `"hello-api"`          |
+| name                 | string    | Required          | Name of the service to be deployed(should be same as service provided at namespace level) | `"hello-api"`          |
 
 #### env variables can be set under env: 
 <pre>
@@ -21,7 +21,7 @@ env:
 </pre>
 
 ### Workflow env variables
-These variables are set by terraform code as action variable and secrets
+These variables are set by Terraform Framework as Github Action Variables.
 
 | Inputs                   | Type         | Required/Optional | <div style="width:400px">Description</div>                | Default |
 |--------------------------|--------------|-------------------|-----------------------------------------------------------|---------|
@@ -33,8 +33,9 @@ These variables are set by terraform code as action variable and secrets
 | registry_name            | string       | Required          | Name of the Google Artifact Registry                      | nil     |
 
 #### Workflow Secrets
+These variables are set by Terraform Framework as Github Action Secrets.
 
 | Secret      | Description                          |
 |-------------|--------------------------------------|
 | PAT         | Github PAT with required permissions |
-| DEPLOY_KEY  | GCP service account credential       |
+| DEPLOY_KEY  | GCP service account credentials to deploy the services        |
