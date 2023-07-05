@@ -180,6 +180,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    name: 🔨 Build
 
     if: github.event_name == 'pull_request' || ( (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push')
 
@@ -225,7 +226,7 @@ jobs:
 
   dockerize:
     runs-on: ubuntu-latest
-    name: Dockerize
+    name: 🐳 Dockerize
     needs: build
 
     outputs:
@@ -266,7 +267,7 @@ jobs:
   deployment:
     runs-on: ubuntu-latest
     needs: dockerize
-    name: Deploy
+    name: 🚀 Deploy
     env:
       image: ${{needs.dockerize.outputs.image}}
 
