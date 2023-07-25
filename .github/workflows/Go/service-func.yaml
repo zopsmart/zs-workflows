@@ -8,13 +8,6 @@ on:
 env:
   GOPRIVATE: developer.zopsmart.com/go/gofr
 
-  app_name: ${{ vars.APP_NAME }}
-  namespace: ${{ vars.NAMESPACE }}
-  cluster_name: ${{ vars.CLUSTER_NAME }}
-  cluster_project_name: ${{ vars.CLUSTER_PROJECT }}
-  gar_project_name: ${{ vars.GAR_PROJECT }}
-  registry_name: ${{ vars.GAR_REGISTRY }}
-
 jobs:
   unit-test:
     name: 🧪 Unit Tests
@@ -178,10 +171,10 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          tags: us-east4-docker.pkg.dev/${{ env.gar_project_name }}/${{ env.registry_name }}/${{ env.app_name}}:${{ github.sha }}
+          tags: us-east4-docker.pkg.dev/${{ vars.GAR_PROJECT }}/${{ vars.GAR_REGISTRY }}/${{ vars.APP_NAME}}:${{ github.sha }}
 
       - id: output-image
-        run: echo "image=`echo us-east4-docker.pkg.dev/${{ env.gar_project_name }}/${{ env.registry_name }}/${{ env.app_name}}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo us-east4-docker.pkg.dev/${{ vars.GAR_PROJECT }}/${{ vars.GAR_REGISTRY }}/${{ vars.APP_NAME}}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
 
   deployment:
     runs-on: ubuntu-latest
@@ -211,7 +204,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: ${{ env.cluster_project_name }}
+          project_id: ${{ vars.CLUSTER_PROJECT }}
           service_account_key: ${{ secrets.DEPLOY_KEY }}
           export_default_credentials: true
 
@@ -219,7 +212,7 @@ jobs:
         run: gcloud --quiet components update kubectl
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials ${{ env.cluster_name }}  --region=us-east4 --project=${{ env.cluster_project_name }}
+        run: gcloud container clusters get-credentials ${{ vars.CLUSTER_NAME }}  --region=us-east4 --project=${{ vars.CLUSTER_PROJECT }}
 
       - name: Update Deployment Image
-        run: helm upgrade --install --set image=${{ env.image }} ${{ env.app_name }} ./helm/service/ -f ./values.yaml -n ${{ env.namespace }}
+        run: helm upgrade --install --set image=${{ env.image }} ${{ vars.APP_NAME }} ./helm/service/ -f ./values.yaml -n ${{ vars.NAMESPACE }}
