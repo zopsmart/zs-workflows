@@ -16,8 +16,7 @@ This repository contains application deployment templates along with required he
 #### env variables can be set under env: 
 <pre>
 env:
-    cloud    : GCP
-    HTTP_PORT: 800
+    HTTP_PORT: 8000
 </pre>
 
 ### Workflow env variables
@@ -35,7 +34,7 @@ These variables are set by Terraform Framework as Github Action Variables.
 #### Workflow Secrets
 These variables are set by Terraform Framework as Github Action Secrets.
 
-| Secret      | Description                          |
-|-------------|--------------------------------------|
-| PAT         | Github PAT with required permissions |
-| DEPLOY_KEY  | GCP service account credentials to deploy the services        |
+| Secret      | Description                                                                                                   |
+|-------------|---------------------------------------------------------------------------------------------------------------|
+| PAT         | Github PAT with required permissions                                                                          |
+| DEPLOY_KEY  | GCP service account credentials to deploy the services with the respective deployment environment as a prefix |
