@@ -13,7 +13,7 @@ jobs:
     name: 🧪 Unit Tests and 🔨 Build
     runs-on: ubuntu-latest
 
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
 
     services:
       mysql:
@@ -178,7 +178,7 @@ jobs:
     name: 🎖 Code Quality
     runs-on: ubuntu-latest
 
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
 
     steps:
       - name: Check out code into the Go module directory
