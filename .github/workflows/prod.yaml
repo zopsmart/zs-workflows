@@ -112,7 +112,7 @@ jobs:
 
       - name: Get dependencies
         run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${{ secrets.PROD_PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go get -v -t -d ./...
 
@@ -199,7 +199,7 @@ jobs:
 
       - name: Setup Git
         run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${{ secrets.PROD_PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
 
       - name: golangci-lint

@@ -110,7 +110,7 @@ jobs:
 
       - name: Get dependencies
         run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${{ secrets.STAGE_PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go get -v -t -d ./...
 
@@ -262,7 +262,7 @@ jobs:
         id: install
 
       - name: Setup Helm Chart
-        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+        run: git clone https://${{ secrets.STAGE_PAT }}@github.com/zopsmart/helm.git
 
       - name: Verify
         run: ls -la
