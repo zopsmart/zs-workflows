@@ -1,0 +1,286 @@
+name: Build and Deploy Service
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  GOPRIVATE: developer.zopsmart.com/go/gofr
+  APP_NAME: ${{ vars.STAGE_APP_NAME }}
+  NAMESPACE: ${{ vars.STAGE_NAMESPACE }}
+  CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
+  CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
+  GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
+  GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
+
+jobs:
+  build:
+    name: 🧪 Unit Tests and 🔨 Build
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+
+    services:
+      mysql:
+        image: mysql:8.0.30
+        ports:
+          - "3306:3306"
+        env:
+          MYSQL_ROOT_PASSWORD: "password"
+
+      redis:
+        image: redis:5.0.14
+        ports:
+          - "6379:6379"
+        options: "--entrypoint redis-server"
+
+      zipkin:
+        image: openzipkin/zipkin
+        ports:
+          - "9411:9411"
+
+      elasticsearch:
+        image: elasticsearch:6.8.6
+        ports:
+          - 2012:9200
+          - 2013:9300
+          - 9200:9200
+        env:
+          discovery type: "single-node"
+
+      kafka:
+        image: krisgeus/docker-kafka
+        ports:
+          - 2008:2008
+          - 2009:2009
+        env:
+          ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:2008,INTERNAL://localhost:2009'
+          LISTENERS: 'PLAINTEXT://0.0.0.0:2008,INTERNAL://0.0.0.0:2009'
+          SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT'
+          INTER_BROKER: 'INTERNAL'
+          KAFKA_CREATE_TOPICS: 'test-topic'
+          KAFKA_HOSTS: 'localhost:2008,localhost:2009'
+          KAFKA_TOPIC: 'test-topic'
+
+      mongo:
+        image: mongo:6.0.2
+        ports:
+          - "27017:27017"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin123
+
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+          - "1433:1433"
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: reallyStrongPwd123
+
+      dynamodb:
+        image: amazon/dynamodb-local
+        ports:
+          - "2021:8000"
+
+      postgres:
+        image: postgres:15.1
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
+
+      cassandra:
+        image: cassandra:4.0.6
+        ports:
+          - 9041:9042
+        options: --health-cmd "cqlsh --debug"
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+        id: go
+
+      - name: Get dependencies
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+          go get -v -t -d ./...
+
+      - name: Test
+        run: |
+          mkdir -p $artifact_directory/build
+          go test ./... -count=1 -v -coverprofile $artifact_directory/cover.out -coverpkg=./...
+          cat $artifact_directory/cover.out | grep -v "mock_interface" | grep -v "migrations" > $artifact_directory/coverage.out
+
+      - name: Test Coverage report
+        run: |
+          go tool cover -func=$artifact_directory/coverage.out | tee $artifact_directory/c.out
+
+      - name: Generate and Commit Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        run: |
+          go install github.com/AlexBeauchemin/gobadge@latest
+          gobadge -filename=$artifact_directory/c.out -target=$(pwd)/README.md
+          git config --local user.email "action@github.com" && git config --local user.name "GitHub-Action"
+          git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md" 
+
+      - name: Push Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{github.ref}}
+
+      - name: Coverage Quality Gate
+        env:
+          TESTCOVERAGE_THRESHOLD: 72.4
+        run: |
+          echo "Quality Gate: checking test coverage is above threshold ..."
+          echo "Threshold             : $TESTCOVERAGE_THRESHOLD %"
+          totalCoverage=`go tool cover -func=$artifact_directory/coverage.out | grep 'total:' | grep -Eo '[0-9]+\.[0-9]+'`
+          echo "Current test coverage : $totalCoverage %"
+          if (( $(echo "$totalCoverage $TESTCOVERAGE_THRESHOLD" | awk '{print ($1 >= $2)}') )); then
+              echo "OK"
+          else
+              echo "Current test coverage is below threshold. Please add more unit tests or adjust threshold to a lower value."
+              echo "Failed"
+              exit 1
+          fi
+
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: main
+
+      - name: Run Server
+        run: go run main.go &
+
+      - name: Delay for Server Startup
+        run: sleep 5
+
+      - name: Install newman and Run Postman Collection
+        run: |
+          npm install -g newman
+          newman run postman-collection/website-service.postman_collection.json
+
+      - name: Stop Server
+        run: pkill main
+
+  code_quality:
+    name: 🎖 Code Quality
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+        id: go
+
+      - name: Setup Git
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+          args: --timeout 8m
+
+  dockerize:
+    runs-on: ubuntu-latest
+    name: 🐳 Dockerize
+    needs: build
+
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: artifacts
+
+      - name: change permission
+        run: chmod a+x main
+
+      - name: Login to GAR
+        uses: docker/login-action@v2
+        with:
+          registry: us-east4-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.STAGE_DEPLOY_KEY }}
+
+      - name: Build and Push Docker Image to GCR
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ./Dockerfile
+          tags: us-east4-docker.pkg.dev/${{ env.GAR_PROJECT }}/${{ env.GAR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}
+
+      - id: output-image
+        run: echo "image=`echo us-east4-docker.pkg.dev/${{ env.GAR_PROJECT }}/${{ env.GAR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+
+  deployment:
+    runs-on: ubuntu-latest
+    needs: dockerize
+    name: 🚀 Deploy
+    env:
+      image: ${{needs.dockerize.outputs.image}}
+
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        id: install
+
+      - name: Setup Helm Chart
+        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+
+      - name: Verify
+        run: ls -la
+      - name: Directory
+        run: pwd
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ env.CLUSTER_PROJECT }}
+          service_account_key: ${{ secrets.STAGE_DEPLOY_KEY }}
+          export_default_credentials: true
+
+      - name: Update Kubectl component
+        run: gcloud --quiet components update kubectl
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }}  --region=us-east4 --project=${{ env.CLUSTER_PROJECT }}
+
+      - name: Update Deployment Image
+        run: helm upgrade --install --set image=${{ env.image }} ${{ env.APP_NAME }} ./helm/service/ -f ./values.yaml -n ${{ env.NAMESPACE }}
