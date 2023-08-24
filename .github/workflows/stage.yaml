@@ -2,7 +2,7 @@ name: Build and Deploy Service
 
 on:
   push:
-    branches: [ "development" ]
+    branches: [ "main" ]
 
 env:
   GOPRIVATE: developer.zopsmart.com/go/gofr
