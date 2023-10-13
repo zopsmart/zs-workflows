@@ -1,0 +1,123 @@
+name: "stage deploy"
+on:
+  workflow_call:
+    inputs:
+      CLUSTER_NAME:
+        description: 'required input'
+        required: true
+        type: string
+
+      CLUSTER_PROJECT:
+        description: 'required input'
+        required: true
+        type: string
+
+      NAMESPACE:
+        description: 'required input'
+        required: true
+        type: string
+
+      registry:
+        description: 'required input'
+        required: true
+        type: string
+
+      username:
+        description: 'required input'
+        required: true
+        type: string
+
+      GCR_PROJECT:
+        description: 'required input'
+        required: true
+        type: string
+
+      APP_NAME:
+        description: 'required input'
+        required: true
+        type: string
+
+
+
+    secrets:
+      PAT:
+        description: 'required input'
+        required: true
+      gcr_key:
+        description: 'required input'
+        required: true
+        
+
+
+jobs:
+  dockerize:
+    runs-on: ubuntu-latest
+
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: artifacts
+
+      - name: change permission
+        run: chmod a+x main
+
+      - name: Login to GCR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.gcr_key }}
+
+
+      - name: Build and Push Docker Image to GCR
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ./Dockerfile
+          tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+      - id: output-image
+        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+
+  stage_deployment:
+      runs-on: ubuntu-latest
+      needs: dockerize
+      container:
+        image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
+        options: --rm
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+      name: 🚀 Deploy Stage
+      env:
+        image: ${{needs.dockerize.outputs.image}}
+
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v2
+
+        - name: Verify
+          run: ls -la
+          
+        - name: Directory
+          run: pwd
+
+        - name: Set up Cloud SDK
+          uses: google-github-actions/setup-gcloud@v0
+          with:
+            project_id: ${{ inputs.CLUSTER_PROJECT }}
+            service_account_key: ${{ secrets.gcr_key }}
+            export_default_credentials: true
+
+        - name: Set GCloud Project and Fetch Cluster Credentials
+          run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+        - name: Update Deployment Image
+          run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}

@@ -1,0 +1,149 @@
+name: "prod deploy"
+on:
+  workflow_call:
+    inputs:
+      CLUSTER_NAME:
+        description: 'required input'
+        required: true
+        type: string
+
+      CLUSTER_PROJECT:
+        description: 'required input'
+        required: true
+        type: string
+
+      NAMESPACE:
+        description: 'required input'
+        required: true
+        type: string
+
+      registry:
+        description: 'required input'
+        required: true
+        type: string
+
+      username:
+        description: 'required input'
+        required: true
+        type: string
+
+      GCR_PROJECT:
+        description: 'required input'
+        required: true
+        type: string
+
+      APP_NAME:
+        description: 'required input'
+        required: true
+        type: string
+
+    secrets:
+      PAT:
+        description: 'required input'
+        required: true
+      gcr_key:
+        description: 'required input'
+        required: true
+
+
+
+jobs:
+  check-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_exists: ${{ steps.tag-check.outputs.tag_exists }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ env.CLUSTER_PROJECT }}
+          service_account_key: ${{ secrets.gcr_key }}
+          export_default_credentials: true
+
+      - name: Check if tag exists
+        id: tag-check
+        run: |
+          if gcloud container images describe ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} 2>/dev/null; then
+              echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Print commit has value
+        run: |
+          echo "${{ github.sha }}"
+
+      - name: Print tag_exists value
+        run: |
+          echo "${{ steps.tag-check.outputs.tag_exists }}"
+          
+
+  dockerize:
+    runs-on: ubuntu-latest
+    needs: check-tag
+    if: ${{ needs.check-tag.outputs.tag_exists == 'true' }}
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Extract Release Tag
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Login to GCR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.gcr_key }}
+
+
+      - name: Re tag and Push Docker Image to GCR
+        run: | 
+          docker pull gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          docker tag gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
+          docker push gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
+      - id: output-image
+        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}`" >> "$GITHUB_OUTPUT"
+
+  prod_deployment:
+    runs-on: ubuntu-latest
+    needs: dockerize
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
+      options: --rm
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.PAT }}
+    name: 🚀 Deploy Prod
+    env:
+      image: ${{needs.dockerize.outputs.image}}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Verify
+        run: ls -la
+
+      - name: Directory
+        run: pwd
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ inputs.CLUSTER_PROJECT }}
+          service_account_key: ${{ secrets.gcr_key }}
+          export_default_credentials: true
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Update Deployment Image
+        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
