@@ -6,6 +6,26 @@ on:
         description: 'required input'
         required: true
         type: string
+      PATH:
+        description: 'path for main file'
+        required: true
+        type: string
+      postman_file_name:
+        description: 'name of postman collection file'
+        required: true
+        type: string
+      DATABASE_PASSWORD:
+        description: 'required input'
+        required: true
+        type: string
+      DATABASE_USER:
+        description: 'required input'
+        required: true
+        type: string
+      DATABASE_DB:
+        description: 'required input'
+        required: true
+        type: string
 
     secrets:
       PAT:
@@ -21,9 +41,30 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.PAT }}
+
+    services:
+      mysql:
+        image: mysql:8.0.31
+        env:
+          MYSQL_ROOT_PASSWORD: "password"
+          MYSQL_DATABASE: "test"
+        ports:
+          - 3306:3306
+
+      postgres:
+        image: postgres:15.1
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+
+      - name: change directory
+        run: cd ${{ inputs.PATH }}
 
       - name: Get dependencies
         run: |
@@ -84,3 +125,16 @@ jobs:
         with:
           name: artifacts
           path: main
+      - name: Run Server
+        run: go run main.go &
+
+      - name: Delay for Server Startup
+        run: sleep 5
+
+      - name: Install newman and Run Postman Collection
+        run: |
+          npm install -g newman
+          newman run postman-collection/${{ inputs.postman_file_name }}.json
+
+      - name: Stop Server
+        run: pkill main

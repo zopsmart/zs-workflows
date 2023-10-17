@@ -37,6 +37,12 @@ on:
         required: true
         type: string
 
+      docker_path:
+        description: 'path of docker file'
+        required: true
+        type: string
+
+
 
 
     secrets:
@@ -81,7 +87,7 @@ jobs:
         with:
           push: true
           context: .
-          file: ./Dockerfile
+          file: ${{ inputs.docker_path }}/Dockerfile
           tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
