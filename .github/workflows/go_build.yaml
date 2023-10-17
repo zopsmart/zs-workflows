@@ -40,12 +40,13 @@ jobs:
           MYSQL_ROOT_PASSWORD: "password"
           MYSQL_DATABASE: "test"
         ports:
-          - "3306:3306"
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       postgres:
         image: postgres:15.1
         ports:
-          - "5432:5432"
+          - 5432:5432
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: postgres
