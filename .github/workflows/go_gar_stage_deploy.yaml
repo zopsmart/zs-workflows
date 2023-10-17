@@ -26,6 +26,9 @@ on:
       HELM_VALUES_PATH:
         type: string
         required: true
+      docker_path:
+        type: string
+        required: true
 
 
 
