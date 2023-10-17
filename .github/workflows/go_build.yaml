@@ -68,7 +68,7 @@ jobs:
       - name: Test
         run: |
           mkdir -p temp/build
-          go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
+          GOFR_ENV=test go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
           cat temp/cover.out | grep -v "mock_interface" | grep -v "migrations" > temp/coverage.out
 
       - name: Test Coverage report
