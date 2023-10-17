@@ -120,11 +120,9 @@ jobs:
           path: main
       - name: Run Server
         if: ${{ inputs.POSTMAN_ENABLED }}
-        run: go run main.go &
-
-      - name: Delay for Server Startup
-        if: ${{ inputs.POSTMAN_ENABLED }}
-        run: sleep 5
+        run: |
+          GOFR_ENV=test go run main.go &
+          sleep 60
 
       - name: Install newman and Run Postman Collection
         if: ${{ inputs.POSTMAN_ENABLED }}
