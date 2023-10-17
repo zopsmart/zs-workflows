@@ -1,10 +1,16 @@
 name: "code_quality"
 on:
   workflow_call:
+    inputs:
+      PATH:
+        description: 'path for main file'
+        required: true
+        type: string
     secrets:
       PAT:
         description: 'pat of the stage'
-        required: true 
+        required: true
+
         
 jobs:
   code_quality:
@@ -24,6 +30,9 @@ jobs:
           run: |
             git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
             git config --global http.sslVerify false
+
+        - name: change directory
+          run: cd ${{ inputs.PATH }}
 
         - name: golangci-lint
           uses: golangci/golangci-lint-action@v3
