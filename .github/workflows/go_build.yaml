@@ -130,7 +130,7 @@ jobs:
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
           npm install -g newman
-          newman run postman-collection/${{ inputs.POSTMAN_FILE_NAME }}
+          newman run postman-collections/${{ inputs.POSTMAN_FILE_NAME }}
 
       - name: Stop Server
         if: ${{ inputs.POSTMAN_ENABLED }}
