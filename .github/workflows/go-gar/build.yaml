@@ -1,0 +1,128 @@
+name: "checkout and build"
+on:
+  workflow_call:
+    inputs:
+      TESTCOVERAGE_THRESHOLD:
+        description: 'required input'
+        required: true
+        type: string
+      PATH:
+        description: 'path for main file'
+        required: true
+        type: string
+      postman_file_name:
+        description: 'name of postman collection file'
+        required: true
+        type: string
+
+    secrets:
+      PAT:
+         description: 'pat of gofr'
+         required: true 
+     
+jobs:
+  checkout_build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zopsmart/gha-images:go-0.1.0
+      options: --rm
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.PAT }}
+
+    services:
+      mysql:
+        image: mysql:8.0.31
+        env:
+          MYSQL_ROOT_PASSWORD: "password"
+          MYSQL_DATABASE: "test"
+        ports:
+          - 3306:3306
+
+      postgres:
+        image: postgres:15.1
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: change directory
+        run: cd ${{ inputs.PATH }}
+
+      - name: Get dependencies
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+          go mod download
+
+      - name: Test
+        run: |
+          mkdir -p temp/build
+          go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
+          cat temp/cover.out | grep -v "mock_interface" | grep -v "migrations" > temp/coverage.out
+
+      - name: Test Coverage report
+        run: |
+          go tool cover -func=temp/coverage.out | tee temp/c.out
+
+      - name: Generate and Commit Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        run: |
+          go install github.com/AlexBeauchemin/gobadge@latest
+          gobadge -filename=temp/c.out -target=$(pwd)/README.md
+          git config --global user.email "action@github.com" && git config --global user.name "GitHub-Action"
+          git config --global --add safe.directory /__w/$(basename ${{ github.repository }})/$(basename ${{ github.repository }})
+          git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md"
+
+      - name: Push Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{github.ref}}
+
+      - name: Coverage Quality Gate
+        run: |
+          echo "Quality Gate: checking test coverage is above threshold ..."
+          echo "Threshold             : ${{ inputs.TESTCOVERAGE_THRESHOLD }}%"
+          totalCoverage=`go tool cover -func=temp/coverage.out | grep 'total:' | grep -Eo '[0-9]+\.[0-9]+'`
+          echo "Current test coverage : $totalCoverage %"
+          totalInt=${totalCoverage%.*}
+          if [ "$totalInt" -ge "${{ inputs.TESTCOVERAGE_THRESHOLD }}" ]; then
+              echo "OK"
+          else
+              echo "Current test coverage is below threshold. Please add more unit tests or adjust threshold to a lower value."
+              echo "Failed"
+              exit 1
+          fi
+
+      - name: Make Directory
+        run: mkdir build
+
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o main
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: main
+      - name: Run Server
+        run: go run main.go &
+
+      - name: Delay for Server Startup
+        run: sleep 5
+
+      - name: Install newman and Run Postman Collection
+        run: |
+          npm install -g newman
+          newman run postman-collection/${{ inputs.postman_file_name }}.json
+
+      - name: Stop Server
+        run: pkill main
