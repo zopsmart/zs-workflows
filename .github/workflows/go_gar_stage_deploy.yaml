@@ -2,49 +2,30 @@ name: "stage deploy"
 on:
   workflow_call:
     inputs:
-      CLUSTER_NAME:
-        description: 'required input'
-        required: true
-        type: string
-
-      CLUSTER_PROJECT:
-        description: 'required input'
-        required: true
-        type: string
-
-      NAMESPACE:
-        description: 'required input'
-        required: true
-        type: string
-
-      registry:
-        description: 'required input'
-        required: true
-        type: string
-
-      username:
-        description: 'required input'
-        required: true
-        type: string
-
-      gar_PROJECT:
-        description: 'required input'
-        required: true
-        type: string
-
       APP_NAME:
-        description: 'required input'
-        required: true
         type: string
-
-      docker_path:
-        description: 'path of docker file'
         required: true
+      IMAGE_REGISTRY:
         type: string
+        required: true
+      GAR_PROJECT:
+        type: string
+        required: true
+      GAR_REGISTRY:
+        type: string
+        required: true
+      CLUSTER_PROJECT:
+        type: string
+        required: true
+      CLUSTER_NAME:
+        type: string
+        required: true
+      NAMESPACE:
+        type: string
+        required: true
       HELM_VALUES_PATH:
         type: string
         required: true
-
 
 
 
