@@ -50,6 +50,12 @@ jobs:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: postgres
           POSTGRES_DB: test
+      redis:
+        image: redis:5.0.14
+        ports:
+          - "6379:6379"
+        options: "--entrypoint redis-server"
+
     steps:
       - name: Check out code
         uses: actions/checkout@v2
