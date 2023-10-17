@@ -26,7 +26,7 @@ on:
       HELM_VALUES_PATH:
         type: string
         required: true
-      docker_path:
+      DOCKER_PATH:
         type: string
         required: true
 
@@ -36,7 +36,7 @@ on:
       PAT:
         description: 'required input'
         required: true
-      gar_key:
+      GAR_KEY:
         description: 'required input'
         required: true
         
@@ -66,7 +66,7 @@ jobs:
         with:
           registry: ${{ inputs.IMAGE_REGISTRY }}
           username: _json_key
-          password: ${{ secrets.gar_key }}
+          password: ${{ secrets.GAR_KEY }}
 
 
       - name: Build and Push Docker Image to gar
@@ -74,7 +74,7 @@ jobs:
         with:
           push: true
           context: .
-          file: ${{ inputs.docker_path }}/Dockerfile
+          file: ${{ inputs.DOCKER_PATH }}/Dockerfile
           tags:  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}
       - id: output-image
         run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
@@ -103,7 +103,7 @@ jobs:
           uses: google-github-actions/setup-gcloud@v0
           with:
             project_id: ${{ inputs.CLUSTER_PROJECT }}
-            service_account_key: ${{ secrets.gar_key }}
+            service_account_key: ${{ secrets.GAR_KEY }}
             export_default_credentials: true
 
         - name: Set GCloud Project and Fetch Cluster Credentials

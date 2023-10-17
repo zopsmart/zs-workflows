@@ -10,10 +10,10 @@ on:
         description: 'path for main file'
         required: true
         type: string
-      postman_enabled:
+      POSTMAN_ENABLED:
         required: true
         type: boolean
-      postman_file_name:
+      POSTMAN_FILE_NAME:
         description: 'name of postman collection file'
         required: true
         type: string
@@ -123,19 +123,19 @@ jobs:
           name: artifacts
           path: main
       - name: Run Server
-        if: ${{ inputs.postman_enabled }}
+        if: ${{ inputs.POSTMAN_ENABLED }}
         run: go run main.go &
 
       - name: Delay for Server Startup
-        if: ${{ inputs.postman_enabled }}
+        if: ${{ inputs.POSTMAN_ENABLED }}
         run: sleep 5
 
       - name: Install newman and Run Postman Collection
-        if: ${{ inputs.postman_enabled }}
+        if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
           npm install -g newman
-          newman run postman-collection/${{ inputs.postman_file_name }}.json
+          newman run postman-collection/${{ inputs.POSTMAN_FILE_NAME }}.json
 
       - name: Stop Server
-        if: ${{ inputs.postman_enabled }}
+        if: ${{ inputs.POSTMAN_ENABLED }}
         run: pkill main
