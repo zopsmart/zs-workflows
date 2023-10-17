@@ -52,7 +52,7 @@ on:
       PAT:
         description: 'required input'
         required: true
-      gcr_key:
+      gar_key:
         description: 'required input'
         required: true
         
@@ -77,11 +77,11 @@ jobs:
       - name: change permission
         run: chmod a+x main
 
-      - name: Login to GCR
+      - name: Login to GAR
         uses: docker/login-action@v2
         with:
-          registry: ${{ inputs.registry }}
-          username: ${{ inputs.username }}
+          registry: ${{ inputs.IMAGE_REGISTRY }}
+          username: _json_key
           password: ${{ secrets.gcr_key }}
 
 
@@ -119,7 +119,7 @@ jobs:
           uses: google-github-actions/setup-gcloud@v0
           with:
             project_id: ${{ inputs.CLUSTER_PROJECT }}
-            service_account_key: ${{ secrets.GCP_SA_KEY }}
+            service_account_key: ${{ secrets.gcr_key }}
             export_default_credentials: true
 
         - name: Set GCloud Project and Fetch Cluster Credentials
