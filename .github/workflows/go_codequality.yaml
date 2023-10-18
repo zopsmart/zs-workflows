@@ -2,7 +2,7 @@ name: "code_quality"
 on:
   workflow_call:
     inputs:
-      PATH:
+      DOCKER_FILE_PATH:
         description: 'path for main file'
         required: true
         type: string
@@ -32,7 +32,7 @@ jobs:
             git config --global http.sslVerify false
 
         - name: change directory
-          run: cd ${{ inputs.PATH }}
+          run: cd ${{ inputs.DOCKER_FILE_PATH }}
 
         - name: golangci-lint
           uses: golangci/golangci-lint-action@v3
