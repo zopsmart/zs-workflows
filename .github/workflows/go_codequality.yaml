@@ -1,16 +1,22 @@
 name: "code_quality"
 on:
   workflow_call:
+    inputs:
+      DOCKER_FILE_PATH:
+        description: 'path for main file'
+        required: true
+        type: string
     secrets:
       PAT:
         description: 'pat of the stage'
-        required: true 
+        required: true
+
         
 jobs:
   code_quality:
       runs-on: ubuntu-latest
       container:
-        image: ghcr.io/zopsmart/gha-images:go-0.1.0
+        image: ghcr.io/zopsmart/gha-images:go-0.1.1
         options: --rm
         credentials:
           username: ${{ github.actor }}
@@ -24,6 +30,9 @@ jobs:
           run: |
             git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
             git config --global http.sslVerify false
+
+        - name: change directory
+          run: cd ${{ inputs.DOCKER_FILE_PATH }}
 
         - name: golangci-lint
           uses: golangci/golangci-lint-action@v3

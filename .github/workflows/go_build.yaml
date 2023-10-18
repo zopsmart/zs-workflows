@@ -6,11 +6,14 @@ on:
         description: 'required input'
         required: true
         type: string
-      PATH:
+      DOCKER_FILE_PATH:
         description: 'path for main file'
         required: true
         type: string
-      postman_file_name:
+      POSTMAN_ENABLED:
+        required: true
+        type: boolean
+      APP_NAME:
         description: 'name of postman collection file'
         required: true
         type: string
@@ -24,7 +27,7 @@ jobs:
   checkout_build:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/zopsmart/gha-images:go-0.1.0
+      image: ghcr.io/zopsmart/gha-images:go-0.1.1
       options: --rm
       credentials:
         username: ${{ github.actor }}
@@ -36,23 +39,25 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: "password"
           MYSQL_DATABASE: "test"
-        ports:
-          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       postgres:
         image: postgres:15.1
-        ports:
-          - 5432:5432
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: postgres
           POSTGRES_DB: test
+
+      redis:
+        image: redis:5.0.14
+        options: "--entrypoint redis-server"
+
     steps:
       - name: Check out code
         uses: actions/checkout@v2
 
       - name: change directory
-        run: cd ${{ inputs.PATH }}
+        run: cd ${{ inputs.DOCKER_FILE_PATH }}
 
       - name: Get dependencies
         run: |
@@ -63,7 +68,7 @@ jobs:
       - name: Test
         run: |
           mkdir -p temp/build
-          go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
+          GOFR_ENV=test go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
           cat temp/cover.out | grep -v "mock_interface" | grep -v "migrations" > temp/coverage.out
 
       - name: Test Coverage report
@@ -114,15 +119,17 @@ jobs:
           name: artifacts
           path: main
       - name: Run Server
-        run: go run main.go &
-
-      - name: Delay for Server Startup
-        run: sleep 5
+        if: ${{ inputs.POSTMAN_ENABLED }}
+        run: |
+          GOFR_ENV=test go run main.go &
+          sleep 60
 
       - name: Install newman and Run Postman Collection
+        if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
           npm install -g newman
-          newman run postman-collection/${{ inputs.postman_file_name }}.json
+          newman run postman-collections/${{ inputs.APP_NAME }}.postman-collection.json
 
       - name: Stop Server
+        if: ${{ inputs.POSTMAN_ENABLED }}
         run: pkill main
