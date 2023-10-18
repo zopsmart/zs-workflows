@@ -41,7 +41,7 @@ on:
       PAT:
         description: 'required input'
         required: true
-      gcr_key:
+      GCR_KEY:
         description: 'required input'
         required: true
 
@@ -61,7 +61,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v0
         with:
           project_id: ${{ env.CLUSTER_PROJECT }}
-          service_account_key: ${{ secrets.gcr_key }}
+          service_account_key: ${{ secrets.GCR_KEY }}
           export_default_credentials: true
 
       - name: Check if tag exists
@@ -101,7 +101,7 @@ jobs:
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
-          password: ${{ secrets.gcr_key }}
+          password: ${{ secrets.GCR_KEY }}
 
 
       - name: Re tag and Push Docker Image to GCR
@@ -139,7 +139,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v0
         with:
           project_id: ${{ inputs.CLUSTER_PROJECT }}
-          service_account_key: ${{ secrets.gcr_key }}
+          service_account_key: ${{ secrets.GCR_KEY }}
           export_default_credentials: true
 
       - name: Set GCloud Project and Fetch Cluster Credentials
