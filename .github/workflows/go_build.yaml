@@ -6,10 +6,6 @@ on:
         description: 'required input'
         required: true
         type: string
-      DOCKER_FILE_PATH:
-        description: 'path for main file'
-        required: true
-        type: string
       POSTMAN_ENABLED:
         required: true
         type: boolean
@@ -56,14 +52,17 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: change directory
-        run: cd ${{ inputs.DOCKER_FILE_PATH }}
-
       - name: Get dependencies
         run: |
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          args: --timeout 8m
 
       - name: Test
         run: |
@@ -106,18 +105,6 @@ jobs:
               exit 1
           fi
 
-      - name: Make Directory
-        run: mkdir build
-
-      - name: Build
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o main
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifacts
-          path: main
       - name: Run Server
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
