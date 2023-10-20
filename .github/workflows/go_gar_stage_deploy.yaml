@@ -40,8 +40,9 @@ on:
         description: "path used for build with respect to main.go file"
         required: true
         type: string
-
-
+      SHA:
+        type: string
+        required: true
 
     secrets:
       PAT:
@@ -120,9 +121,9 @@ jobs:
           push: true
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
-          tags:  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          tags:  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
       - id: output-image
-        run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   stage_deployment:
       runs-on: ubuntu-latest

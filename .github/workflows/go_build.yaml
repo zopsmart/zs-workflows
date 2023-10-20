@@ -1,4 +1,4 @@
-name: "checkout and build"
+name: "test and linters"
 on:
   workflow_call:
     inputs:
@@ -13,22 +13,27 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
-
+    outputs:
+      SHA:
+        description: "commit sha for image"
+        value: ${{ jobs.test.outputs.sha }}
     secrets:
       PAT:
          description: 'pat of gofr'
          required: true 
      
 jobs:
-  checkout_build:
+  test:
     runs-on: ubuntu-latest
+    name: test and linters
     container:
       image: ghcr.io/zopsmart/gha-images:go-0.1.1
       options: --rm
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.PAT }}
-
+    outputs:
+      sha: ${{ steps.output-sha.outputs.sha }}
     services:
       mysql:
         image: mysql:8.0.31
@@ -89,6 +94,16 @@ jobs:
         with:
           github_token: ${{ github.token }}
           branch: ${{github.ref}}
+
+      - id: output-sha
+        run: |
+          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/main' ]]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Coverage Quality Gate
         run: |
