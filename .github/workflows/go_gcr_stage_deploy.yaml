@@ -37,13 +37,23 @@ on:
         required: true
         type: string
 
-      DOCKER_PATH:
+      DOCKER_FILE_PATH:
         description: 'path of docker file'
         required: true
         type: string
 
+      BUILD_COMMAND:
+        description: 'go build command'
+        required: true
+        type: string
 
-
+      ARTIFACT_PATH:
+        description: "path used for build with respect to main.go file"
+        required: true
+        type: string
+      SHA:
+        type: string
+        required: true
 
     secrets:
       PAT:
@@ -59,9 +69,43 @@ on:
 
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/zopsmart/gha-images:go-0.1.1
+      options: --rm
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.PAT }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: change directory
+        run: cd ${{ inputs.DOCKER_FILE_PATH }}
+
+      - name: Get dependencies
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+          go mod download
+
+      - name: Make Directory
+        run: mkdir build
+
+      - name: Build
+        run: |
+          ${{ inputs.BUILD_COMMAND }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ inputs.APP_NAME }}
+          path: ${{ inputs.ARTIFACT_PATH }}
+
   dockerize:
     runs-on: ubuntu-latest
-
+    needs: [ build ]
     outputs:
       image: ${{ steps.output-image.outputs.image }}
 
@@ -72,7 +116,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: artifacts
+          name: ${{ inputs.APP_NAME }}
 
       - name: change permission
         run: chmod a+x main
@@ -90,10 +134,10 @@ jobs:
         with:
           push: true
           context: .
-          file: ${{ inputs.DOCKER_PATH }}/Dockerfile
-          tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
+          tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
       - id: output-image
-        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   stage_deployment:
       runs-on: ubuntu-latest

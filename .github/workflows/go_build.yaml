@@ -1,13 +1,9 @@
-name: "checkout and build"
+name: "test and linters"
 on:
   workflow_call:
     inputs:
       TESTCOVERAGE_THRESHOLD:
         description: 'required input'
-        required: true
-        type: string
-      DOCKER_FILE_PATH:
-        description: 'path for main file'
         required: true
         type: string
       POSTMAN_ENABLED:
@@ -17,22 +13,27 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
-
+    outputs:
+      SHA:
+        description: "commit sha for image"
+        value: ${{ jobs.test.outputs.sha }}
     secrets:
       PAT:
          description: 'pat of gofr'
          required: true 
      
 jobs:
-  checkout_build:
+  test:
     runs-on: ubuntu-latest
+    name: test and linters
     container:
       image: ghcr.io/zopsmart/gha-images:go-0.1.1
       options: --rm
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.PAT }}
-
+    outputs:
+      sha: ${{ steps.output-sha.outputs.sha }}
     services:
       mysql:
         image: mysql:8.0.31
@@ -56,14 +57,17 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: change directory
-        run: cd ${{ inputs.DOCKER_FILE_PATH }}
-
       - name: Get dependencies
         run: |
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          args: --timeout 8m
 
       - name: Test
         run: |
@@ -91,6 +95,16 @@ jobs:
           github_token: ${{ github.token }}
           branch: ${{github.ref}}
 
+      - id: output-sha
+        run: |
+          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/main' ]]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Coverage Quality Gate
         run: |
           echo "Quality Gate: checking test coverage is above threshold ..."
@@ -106,18 +120,6 @@ jobs:
               exit 1
           fi
 
-      - name: Make Directory
-        run: mkdir build
-
-      - name: Build
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o main
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifacts
-          path: main
       - name: Run Server
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
