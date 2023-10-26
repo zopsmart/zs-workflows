@@ -56,7 +56,9 @@ on:
         required: true
       TYPE:
         type: string
-        required: true
+        description: "deployment or cron"
+        required: false
+        default: deployment
 
     secrets:
       PAT:
