@@ -105,7 +105,7 @@ jobs:
           name: ${{ inputs.APP_NAME }}
 
       - name: change permission
-        run: chmod a+x main
+        run: chmod a+x ${{ inputs.ARTIFACT_PATH }}
 
       - name: Login to GAR
         uses: docker/login-action@v2
