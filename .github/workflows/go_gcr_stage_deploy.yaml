@@ -54,6 +54,9 @@ on:
       SHA:
         type: string
         required: true
+      TYPE:
+        type: string
+        required: true
 
     secrets:
       PAT:
@@ -173,4 +176,9 @@ jobs:
           run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
         - name: Update Deployment Image
+          if: ${{ inputs.TYPE = 'deployment' }}
           run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+
+        - name: Update Cron Image
+          if: ${{ inputs.TYPE = 'cron' }}
+          run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
