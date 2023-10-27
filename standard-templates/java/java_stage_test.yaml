@@ -58,7 +58,7 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/app-templates/.github/workflows/java_stage_deploy.yaml@java-reusable  
+    uses: zopsmart/app-templates/.github/workflows/gcr_stage_deploy.yaml@java-reusable  
 
   prod_deployment:
     needs: [ build ]
@@ -100,4 +100,4 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/app-templates/.github/workflows/java_prod_deploy.yaml@java-reusable 
+    uses: zopsmart/app-templates/.github/workflows/gcr_prod_deploy.yaml@java-reusable 
