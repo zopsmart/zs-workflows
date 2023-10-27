@@ -75,10 +75,6 @@ jobs:
           name: ${{ inputs.ARTIFACT_NAME }}
           path: ${{ inputs.ARTIFACT_PATH }}
 
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: build/libs
-
       - name: 'Echo download path'
         run: echo ${{steps.download.outputs.download-path}}
 
