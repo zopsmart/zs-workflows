@@ -27,14 +27,17 @@ jobs:
           - DOCKER_FILE_PATH: "./workspaceDockerfile"
             app_name: "${{ env.app_name }}"  
             namespace: "workspace-stage"
+            type: "deployment"
 
           - DOCKER_FILE_PATH: "./updateNotificationsDockerfile"
             app_name: "${{ env.cron_name }}" 
             namespace: "workspace-stage"
+            type: "cron"
 
           - DOCKER_FILE_PATH: "./leaveCronDockerfile"
             app_name: "${{ env.leave_update }}" 
             namespace: "workspace-stage"
+            type: "cron"
 
                    
     with:
@@ -47,10 +50,55 @@ jobs:
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       GCR_PROJECT: zs-products
-      SHA: ${{ needs.build.outputs.SHA }}
+      SHA: ${{ github.sha }}
+      TYPE: ${{ matrix.type }}
+      ARTIFACT_PATH: build/libs
+      ARTIFACT_NAME: artifacts
     secrets:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
     uses: zopsmart/app-templates/.github/workflows/java_stage_deploy.yaml@java-reusable  
-    
+
+  prod_deployment:
+    needs: [ build ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - DOCKER_FILE_PATH: "./workspaceDockerfile"
+            app_name: "${{ env.app_name }}"  
+            namespace: "workspace-stage"
+            type: "deployment"
+
+          - DOCKER_FILE_PATH: "./updateNotificationsDockerfile"
+            app_name: "${{ env.cron_name }}" 
+            namespace: "workspace-stage"
+            type: "cron"
+
+          - DOCKER_FILE_PATH: "./leaveCronDockerfile"
+            app_name: "${{ env.leave_update }}" 
+            namespace: "workspace-stage"
+            type: "cron"
+
+                   
+    with:
+      IMAGE_REGISTRY: gcr.io
+      username: _json_key
+      PROJECT_NAME: ${{env.project_name}}
+      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
+      CLUSTER_NAME: products-cluster
+      CLUSTER_PROJECT: zs-products
+      GCR_PROJECT: zs-products
+      SHA: ${{ github.sha }}
+      TYPE: ${{ matrix.type }}
+      ARTIFACT_PATH: build/libs
+      ARTIFACT_NAME: artifacts
+    secrets:
+      GCR_KEY: ${{ secrets.GCR_KEY }}
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
+
+    uses: zopsmart/app-templates/.github/workflows/java_prod_deploy.yaml@java-reusable 
