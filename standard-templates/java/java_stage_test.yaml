@@ -1,0 +1,56 @@
+name: Build and Deploy Service
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+    tags:
+      - '*'
+
+jobs:
+  build:
+    uses: zopsmart/app-templates/.github/workflows/java_build.yaml@java-reusable
+       
+    secrets:
+      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
+      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
+
+
+  stage_deployment:
+    needs: [ build ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - DOCKER_FILE_PATH: "./workspaceDockerfile"
+            app_name: "${{ env.app_name }}"  
+            namespace: "workspace-stage"
+
+          - DOCKER_FILE_PATH: "./updateNotificationsDockerfile"
+            app_name: "${{ env.cron_name }}" 
+            namespace: "workspace-stage"
+
+          - DOCKER_FILE_PATH: "./leaveCronDockerfile"
+            app_name: "${{ env.leave_update }}" 
+            namespace: "workspace-stage"
+
+                   
+    with:
+      IMAGE_REGISTRY: gcr.io
+      username: _json_key
+      PROJECT_NAME: ${{env.project_name}}
+      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
+      CLUSTER_NAME: products-cluster
+      CLUSTER_PROJECT: zs-products
+      GCR_PROJECT: zs-products
+      SHA: ${{ needs.build.outputs.SHA }}
+    secrets:
+      GCR_KEY: ${{ secrets.GCR_KEY }}
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
+
+    uses: zopsmart/app-templates/.github/workflows/java_stage_deploy.yaml@java-reusable  
+    
