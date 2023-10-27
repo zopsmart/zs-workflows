@@ -46,7 +46,10 @@ on:
         description: "path used for build with respect to main.go file"
         required: true
         type: string
-
+      ARTIFACT_NAME:
+        description: "name of the built artifacts"
+        required: true
+        type: string
     secrets:
       GCR_KEY:
         description: 'required input'
@@ -69,7 +72,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: ${{ inputs.APP_NAME }}
+          name: ${{ inputs.ARTIFACT_NAME }}
           path: ${{ inputs.ARTIFACT_PATH }}
 
       - name: Display structure of downloaded files
@@ -78,7 +81,7 @@ jobs:
 
       - name: 'Echo download path'
         run: echo ${{steps.download.outputs.download-path}}
-        
+
       - name: Login to GCR
         uses: docker/login-action@v1
         with:
