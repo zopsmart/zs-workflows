@@ -31,14 +31,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - build_commands: "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o main"
-            artifact_path: "main"
+          - build_commands: "<build command>"
+            artifact_path: "based on build"
             DOCKER_FILE_PATH: "."
             app_name: "app-name"
             namespace: "namespace-name"
             type: "deployment"
-          - build_commands: "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o cron"
-            artifact_path: "cron"
+          - build_commands: "<build commadn>"
+            artifact_path: "based on build"
             DOCKER_FILE_PATH: "./cron/"
             app_name: "cron-name"
             namespace: "namespace-name"
