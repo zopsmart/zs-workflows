@@ -35,6 +35,10 @@ on:
         description: "deployment or cron"
         required: false
         default: deployment
+      ARTIFACT_PATH:
+        description: "path used for build with respect to main.go file"
+        required: true
+        type: string
 
     secrets:
       GCR_KEY:
@@ -92,16 +96,20 @@ jobs:
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Checkout Code
         uses: actions/checkout@v2
+
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
-          name: artifacts
-          path: build/libs
+          name: ${{ inputs.APP_NAME }}
+          path: ${{ inputs.ARTIFACT_PATH }}
+
       - name: Display structure of downloaded files
         run: ls -R
         working-directory: build/libs
+
       - name: 'Echo download path'
         run: echo ${{steps.download.outputs.download-path}}
+
       - name: Login to GCR
         uses: docker/login-action@v1
         with:
