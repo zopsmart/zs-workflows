@@ -93,7 +93,6 @@ jobs:
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       GCR_PROJECT: zs-products
-      SHA: ${{ github.sha }}
       TYPE: ${{ matrix.type }}
       ARTIFACT_PATH: build/libs
       ARTIFACT_NAME: artifacts
