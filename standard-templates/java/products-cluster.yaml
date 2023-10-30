@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/app-template/.github/workflows/java_build.yaml@java-reusable
+    uses: zopsmart/app-template/.github/workflows/java_build.yaml@main
 
     secrets:
       GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
@@ -51,7 +51,7 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/app-template/.github/workflows/gcr_stage_deploy.yaml@java-reusable
+    uses: zopsmart/app-template/.github/workflows/gcr_stage_deploy.yaml@main
 
   prod_deployment:
     needs: [ build ]
@@ -81,4 +81,4 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@java-reusable
+    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@main
