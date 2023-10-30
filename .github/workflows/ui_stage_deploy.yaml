@@ -1,0 +1,113 @@
+name: "test and linters"
+on:
+  workflow_call:
+    inputs:
+      IMAGE_REGISTRY:
+        type: string
+        required: true
+      username:
+        type: string
+        required: true
+      GCR_PROJECT:
+        description: 'required input'
+        required: true
+        type: string
+      APP_NAME:
+        type: string
+        required: true
+      SHA:
+        type: string
+        required: true
+      PROJECT_NAME:
+        type: string
+        required: true
+      CLUSTER_NAME:
+        description: 'required input'
+        required: true
+        type: string
+      CLUSTER_PROJECT:
+        description: 'required input'
+        required: true
+        type: string
+      NAMESPACE:
+        description: 'required input'
+        required: true
+        type: string
+    secrets:
+      GCR_KEY:
+        description: 'required input'
+        required: true
+      DEPLOY_KEY:
+        description: 'required input'
+        required: true
+
+jobs:
+  dockerize_stage:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+    name: 🐳 Dockerize Stage    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GCR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.IMAGE_REGISTRY }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.GCR_KEY }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.IMAGE_REGISTRY }}
+
+      - name: Unzipping artifacts
+        id: tag
+        run: |
+          tar -xf hiring-portal-ui.zip
+          tar -xf node_modules.zip
+
+      - name: Build and Push Image Stage
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: .
+          tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
+
+      - id: output-image
+        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
+
+  stage_deployment:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy to Stage
+    needs: dockerize_stage
+    env:
+      image: ${{needs.dockerize_stage.outputs.image}}
+
+    steps:
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{inputs.PROJECT_NAME}}
+          service_account_key: ${{ secrets.DEPLOY_KEY}}
+          export_default_credentials: true
+
+      - name: Update Kubectl component
+        run: gcloud --quiet components update kubectl
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run:
+          gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --zone=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Update Deployment Image
+        if: ${{ inputs.TYPE == 'deployment' }}
+        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+
+      - name: Update Cron Image
+        if: ${{ inputs.TYPE == 'cron' }}
+        run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}

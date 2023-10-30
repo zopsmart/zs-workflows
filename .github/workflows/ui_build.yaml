@@ -1,0 +1,68 @@
+name: "test and linters"
+on:
+  workflow_call:
+    secrets:
+      PAT:
+         description: 'pat of gofr'
+         required: true 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: ⬇️ Installing dependencies, Prettier, Lint, Test, Build and uploading artifacts
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      - name: installing dependencies and zipping node modules
+        run: |
+          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
+          yarn install
+          tar -zcf node_modules.zip node_modules/
+
+      - name: run linter
+        run: |
+          CI=false yarn lint
+
+      - name: run prettier
+        run: |
+          CI=false yarn prettier:check
+
+      - name: run tests
+        run: |
+          CI=false yarn test:coverage
+
+      - name: Generate Coverage Badges
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/development')
+        run: |
+          CI=false yarn make-badges
+
+      - name: Commit Badge changes
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/development')
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git diff --quiet --exit-code README.md || git commit -a -m "Update badges in README.md file"
+
+      - name: Push Coverage Badge
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/development')
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.PAT }}
+          branch: ${{github.ref}}
+
+      - name: Generating build
+        run: |
+          CI=false yarn run build
+          tar -zcf hiring-portal-ui.zip build
+
+      - uses: actions/upload-artifact@v3
+        name: upload zipped build and node modules
+        with:
+          name: artifacts
+          path: |
+            hiring-portal-ui.zip
+            node_modules.zip
