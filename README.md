@@ -1,26 +1,8 @@
 # App Template
-This repository contains application deployment templates along with required helm values
-
-### Variables(values.yaml)
-
-| Inputs               | Type      | Required/Optional | <div style="width:420px">Description</div>                                                | Default                |
-|----------------------|-----------|-------------------|-------------------------------------------------------------------------------------------|------------------------|
-| maxCPU               | string    | Optional          | Maximum CPU resources                                                                     | `"500m"`               |
-| maxMemory            | string    | Optional          | Maximum Memory resources                                                                  | `"512Mi"`              |
-| maxReplicas          | number    | Optional          | Maximum replicas                                                                          | `4`                    |
-| minCPU               | string    | Optional          | Minimum CPU resources                                                                     | `"250m"`               |
-| minMemory            | string    | Optional          | Minimum Memory resources                                                                  | `"128Mi"`              |
-| minReplicas          | number    | Optional          | Minimum replicas                                                                          | `2`                    |
-| name                 | string    | Required          | Name of the service to be deployed(should be same as service provided at namespace level) | `"hello-api"`          |
-
-#### env variables can be set under env: 
-<pre>
-env:
-    HTTP_PORT: 8000
-</pre>
+This repository contains reusable workflows and standard templates for `go` and `java`.
 
 ### Workflow env variables
-These variables are set by Terraform Framework as Github Action Variables.
+These variables are set by Terraform Framework as GitHub Action Variables.
 
 | Inputs                   | Type         | Required/Optional | <div style="width:400px">Description</div>                | Default |
 |--------------------------|--------------|-------------------|-----------------------------------------------------------|---------|
@@ -32,7 +14,7 @@ These variables are set by Terraform Framework as Github Action Variables.
 | registry_name            | string       | Required          | Name of the Google Artifact Registry                      | nil     |
 
 #### Workflow Secrets
-These variables are set by Terraform Framework as Github Action Secrets.
+These variables are set by Terraform Framework as GitHub Action Secrets.
 
 | Secret      | Description                                                                                                   |
 |-------------|---------------------------------------------------------------------------------------------------------------|
