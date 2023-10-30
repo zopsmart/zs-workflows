@@ -1,0 +1,84 @@
+name: Build and Deploy Service
+
+on:
+  pull_request:
+    types: [review_requested]
+    branches:
+      - main
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+
+jobs:
+  build:
+    uses: zopsmart/app-template/.github/workflows/java_build.yaml@java-reusable
+
+    secrets:
+      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
+      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
+
+
+  stage_deployment:
+    needs: [ build ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - DOCKER_FILE_PATH: "Dockerfile"
+            app_name: "training-api"
+            namespace: "training-stage"
+            type: "deployment"
+
+
+    with:
+      IMAGE_REGISTRY: gcr.io
+      username: _json_key
+      PROJECT_NAME: "zs-products"
+      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
+      CLUSTER_NAME: products-cluster
+      CLUSTER_PROJECT: zs-products
+      GCR_PROJECT: zs-products
+      SHA: ${{ github.sha }}
+      TYPE: ${{ matrix.type }}
+      ARTIFACT_PATH: build/libs
+      ARTIFACT_NAME: artifacts
+    secrets:
+      GCR_KEY: ${{ secrets.GCR_KEY }}
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
+
+    uses: zopsmart/app-template/.github/workflows/gcr_stage_deploy.yaml@java-reusable
+
+  prod_deployment:
+    needs: [ build ]
+    if: ${{ startsWith(github.ref, 'refs/tags/v')}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app_name: "training-api"
+            namespace: "training"
+            type: "deployment"
+
+
+    with:
+      IMAGE_REGISTRY: gcr.io
+      username: _json_key
+      PROJECT_NAME: "zs-products"
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
+      CLUSTER_NAME: products-cluster
+      CLUSTER_PROJECT: zs-products
+      GCR_PROJECT: zs-products
+      TYPE: ${{ matrix.type }}
+      ARTIFACT_PATH: build/libs
+      ARTIFACT_NAME: artifacts
+    secrets:
+      GCR_KEY: ${{ secrets.GCR_KEY }}
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
+
+    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@java-reusable
