@@ -61,7 +61,7 @@ jobs:
             namespace: "hiringmotion"
             type: "deployment"
 
-    uses: zopsmart/app-template/.github/workflows/ui_prod_deploy.yaml@main
+    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@main
     with:
       registry: gcr.io
       username: _json_key
