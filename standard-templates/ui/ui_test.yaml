@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: zopsmart/app-template/.github/workflows/ui_build.yaml@main
+    uses: zopsmart/app-template/.github/workflows/ui_build.yaml@ui-reusable
     secrets:
       PAT: ${{secrets.GITHUB_TOKEN}}
 
@@ -28,7 +28,7 @@ jobs:
             namespace: "hiringmotion-stage"
             type: "deployment"
 
-    uses: zopsmart/app-template/.github/workflows/ui_stage_deploy.yaml@main
+    uses: zopsmart/app-template/.github/workflows/ui_stage_deploy.yaml@ui-reusable
 
     with:
       ARTIFACT_PATH: ${{ matrix.artifact_path }}
