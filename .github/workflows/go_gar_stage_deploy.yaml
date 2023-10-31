@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ inputs.APP_NAME }}
-          path: ${{ inputs.DOCKER_FILE_PATH }}/${{ inputs.ARTIFACT_PATH }}/${{ inputs.ARTIFACT_PATH }}
+          path: ${{ inputs.DOCKER_FILE_PATH }}/${{ inputs.ARTIFACT_PATH }}
 
   dockerize:
     runs-on: ubuntu-latest
