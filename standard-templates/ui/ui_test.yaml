@@ -13,8 +13,9 @@ jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     uses: zopsmart/app-template/.github/workflows/ui_build.yaml@ui-reusable
+    with:
+      APP_NAME: 'hiring-motion-ui'
     secrets:
-      PAT: ${{secrets.PAT}}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   stage_deployment:
@@ -41,7 +42,7 @@ jobs:
       GCR_PROJECT: zs-products
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
-      SHA: ${{ github.sha }}
+      SHA: ${{ needs.build.outputs.SHA }}
       TYPE: ${{ matrix.type }}
 
 

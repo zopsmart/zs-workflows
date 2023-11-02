@@ -2,14 +2,25 @@ name: "test and linters"
 on:
   workflow_call:
     secrets:
-      PAT:
-         description: 'pat of gofr'
-         required: true 
+      GITHUB_TOKEN:
+         description: 'github token'
+         required: true
+    inputs:
+      APP_NAME:
+          description: 'name of ui service'
+          required: true
+    outputs:
+      SHA:
+        description: "commit sha for image"
+        value: ${{ jobs.build.outputs.sha }}
+
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: ⬇️ Installing dependencies, Prettier, Lint, Test, Build and uploading artifacts
+    name: 🧪 Test and 🔨 Build
+    outputs:
+      sha: ${{ steps.output-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -36,33 +47,46 @@ jobs:
           CI=false yarn test:coverage
 
       - name: Generate Coverage Badges
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/development')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/development')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git diff --quiet --exit-code README.md || git commit -a -m "Update badges in README.md file"
+      
 
       - name: Push Coverage Badge
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/development')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{github.ref}}
 
+      - id: output-sha
+        run: |
+          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/main' ]]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Generating build
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           CI=false yarn run build
-          tar -zcf hiring-portal-ui.zip build
+          tar -zcf ${{ inputs.APP_NAME }}.zip build
 
       - uses: actions/upload-artifact@v3
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         name: upload zipped build and node modules
         with:
           name: artifacts
           path: |
-            hiring-portal-ui.zip
+            ${{ inputs.APP_NAME }}.zip
             node_modules.zip

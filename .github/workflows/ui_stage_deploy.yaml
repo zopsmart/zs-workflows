@@ -33,6 +33,7 @@ on:
         description: 'required input'
         required: true
         type: string
+
     secrets:
       GCR_KEY:
         description: 'required input'
@@ -69,7 +70,7 @@ jobs:
       - name: Unzipping artifacts
         id: tag
         run: |
-          tar -xf hiring-portal-ui.zip
+          tar -xf ${{ inputs.APP_NAME }}.zip
           tar -xf node_modules.zip
 
       - name: Build and Push Image Stage
