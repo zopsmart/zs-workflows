@@ -13,8 +13,8 @@ on:
 
 jobs:
   build:
+    if: (github.ref == 'refs/heads/development') || github.event_name == 'pull_request'
     uses: zopsmart/app-template/.github/workflows/java_build.yaml@main
-
     secrets:
       GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
       GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
@@ -54,7 +54,6 @@ jobs:
     uses: zopsmart/app-template/.github/workflows/gcr_stage_deploy.yaml@main
 
   prod_deployment:
-    needs: [ build ]
     if: ${{ startsWith(github.ref, 'refs/tags/v')}}
     strategy:
       fail-fast: false
