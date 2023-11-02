@@ -2,7 +2,7 @@ name: "test and linters"
 on:
   workflow_call:
     secrets:
-      GITHUB_TOKEN:
+      PAT:
          description: 'github token'
          required: true
     inputs:
@@ -63,7 +63,7 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: ad-m/github-push-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.PAT}}
           branch: ${{github.ref}}
 
       - id: output-sha

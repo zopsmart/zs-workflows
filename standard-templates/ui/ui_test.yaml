@@ -16,7 +16,7 @@ jobs:
     with:
       APP_NAME: 'hiring-motion-ui'
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PAT: ${{ secrets.GITHUB_TOKEN }}
 
   stage_deployment:
     needs: [ build ]
