@@ -41,7 +41,7 @@ on:
         type: string
       ARTIFACT_NAME:
         description: "name of the built artifacts"
-        required: true
+        required: false
         type: string
 
     secrets:
