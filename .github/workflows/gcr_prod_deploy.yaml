@@ -37,7 +37,7 @@ on:
         default: deployment
       ARTIFACT_PATH:
         description: "path used for build with respect to main.go file"
-        required: true
+        required: false
         type: string
       ARTIFACT_NAME:
         description: "name of the built artifacts"
