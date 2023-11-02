@@ -41,6 +41,9 @@ on:
       DEPLOY_KEY:
         description: 'required input'
         required: true
+      PAT:
+        description: 'for access to base image'
+        required: true
 
 jobs:
   dockerize_stage:
@@ -87,6 +90,12 @@ jobs:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to Stage
     needs: dockerize_stage
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
+      options: --rm
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.PAT }}
     env:
       image: ${{needs.dockerize_stage.outputs.image}}
 
@@ -97,9 +106,6 @@ jobs:
           project_id: ${{inputs.PROJECT_NAME}}
           service_account_key: ${{ secrets.DEPLOY_KEY}}
           export_default_credentials: true
-
-      - name: Update Kubectl component
-        run: gcloud --quiet components update kubectl
 
       - name: Set GCloud Project and Fetch Cluster Credentials
         run:
