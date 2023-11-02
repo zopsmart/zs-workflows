@@ -13,7 +13,7 @@ on:
         required: true
       PROJECT_NAME:
         type: string
-        required: true
+        required: false
       NAMESPACE:
         description: 'required input'
         required: true
@@ -133,7 +133,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: ${{inputs.PROJECT_NAME}}
+          project_id: ${{inputs.CLUSTER_PROJECT}}
           service_account_key: ${{ secrets.DEPLOY_KEY }}
           export_default_credentials: true
       - name: Update Kubectl component

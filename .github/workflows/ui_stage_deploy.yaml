@@ -26,6 +26,10 @@ on:
         description: 'required input'
         required: true
         type: string
+      DOCKER_FILE_PATH:
+        description: 'path of docker file'
+        required: true
+        type: string
       NAMESPACE:
         description: 'required input'
         required: true
@@ -75,6 +79,7 @@ jobs:
         with:
           push: true
           context: .
+          file: ${{ inputs.DOCKER_FILE_PATH }}
           tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
 
       - id: output-image
