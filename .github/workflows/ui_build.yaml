@@ -9,6 +9,7 @@ on:
       APP_NAME:
           description: 'name of ui service'
           required: true
+          type: string
     outputs:
       SHA:
         description: "commit sha for image"
