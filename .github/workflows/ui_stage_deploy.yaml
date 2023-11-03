@@ -69,7 +69,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: artifacts
+          name: ${{ inputs.APP_NAME }}
 
       - name: Unzipping artifacts
         id: tag

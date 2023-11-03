@@ -14,6 +14,15 @@ on:
           description: 'node version'
           type: string
           required: true
+      BUILD_COMMAND:
+        description: 'node build command'
+        required: true
+        type: string
+      ARTIFACT_PATH:
+        description: "path used for build"
+        required: true
+        type: string
+
     outputs:
       SHA:
         description: "commit sha for image"
@@ -84,14 +93,12 @@ jobs:
       - name: Generating build
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
-          CI=false yarn run build
-          tar -zcf ${{ inputs.APP_NAME }}.zip build
+          ${{ inputs.BUILD_COMMAND }}
 
       - uses: actions/upload-artifact@v3
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
         name: upload zipped build and node modules
         with:
-          name: artifacts
+          name: ${{ inputs.APP_NAME }}
           path: |
-            ${{ inputs.APP_NAME }}.zip
-            node_modules.zip
+            ${{ inputs.ARTIFACT_PATH }}
