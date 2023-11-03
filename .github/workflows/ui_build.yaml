@@ -20,7 +20,7 @@ on:
         type: string
       ARTIFACT_PATH:
         description: "path used for build"
-        required: false
+        required: true
         type: string
 
     outputs:
