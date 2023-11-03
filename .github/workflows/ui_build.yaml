@@ -22,6 +22,12 @@ on:
         description: "path used for build"
         required: true
         type: string
+      BRANCH_NAME:
+        description: 'name of branch ${{ inputs.BRANCH_NAME }}/master'
+        required: false
+        type: string
+        default: main
+
 
     outputs:
       SHA:
@@ -61,12 +67,12 @@ jobs:
           CI=false yarn test:coverage
 
       - name: Generate Coverage Badges
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}')
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}')
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -74,7 +80,7 @@ jobs:
       
 
       - name: Push Coverage Badge
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}')
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT}}
@@ -82,7 +88,7 @@ jobs:
 
       - id: output-sha
         run: |
-          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/main' ]]; then
+          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/${{ inputs.BRANCH_NAME }}' ]]; then
             sha=$(git rev-parse HEAD)
           else
             sha="${{ github.sha }}"
@@ -91,12 +97,12 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Generating build
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}')
         run: |
           ${{ inputs.BUILD_COMMAND }}
 
       - uses: actions/upload-artifact@v3
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}')
         name: upload zipped build and node modules
         with:
           name: ${{ inputs.APP_NAME }}
