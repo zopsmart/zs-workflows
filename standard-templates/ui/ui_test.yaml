@@ -1,80 +1,69 @@
 name: Build and Deploy
-
-on:
+'on':
   pull_request:
-    types: [review_requested]
+    types:
+      - review_requested
   push:
     tags:
       - '*'
     branches:
       - main
-
 jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     uses: zopsmart/app-template/.github/workflows/ui_build.yaml@ui-reusable
     with:
-      APP_NAME: 'hiring-motion-ui'
+      APP_NAME: smart-quiz-admin-ui
+      NODE_VERSION: '16.x'
     secrets:
-      PAT: ${{ secrets.GITHUB_TOKEN }}
-
+      PAT: '${{ secrets.GITHUB_TOKEN }}'
   stage_deployment:
-    needs: [ build ]
+    needs:
+      - build
     if: (github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
         include:
-          - DOCKER_FILE_PATH: "Dockerfile"
-            app_name: "hiring-motion-ui"
-            namespace: "hiringmotion-stage"
-            type: "deployment"
-
+          - DOCKER_FILE_PATH: Dockerfile
+            app_name: smart-quiz-admin-ui
+            namespace: quizzing-pro-stage
+            type: deployment
     uses: zopsmart/app-template/.github/workflows/ui_stage_deploy.yaml@ui-reusable
-
     with:
-      ARTIFACT_PATH: ${{ matrix.artifact_path }}
-      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
-      APP_NAME: ${{ matrix.app_name }}
-      NAMESPACE: ${{ matrix.namespace }}
-      registry: gcr.io
+      DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
+      APP_NAME: '${{ matrix.app_name }}'
+      NAMESPACE: '${{ matrix.namespace }}'
+      IMAGE_REGISTRY: gcr.io
       username: _json_key
       GCR_PROJECT: zs-products
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
-      SHA: ${{ needs.build.outputs.SHA }}
-      TYPE: ${{ matrix.type }}
-
-
+      SHA: '${{ needs.build.outputs.SHA }}'
+      TYPE: '${{ matrix.type }}'
     secrets:
-      GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
-      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-      PAT: ${{ secrets.PAT }}
-
+      GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
+      DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'
   prod_deployment:
-    needs: [ stage_deployment ]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: "startsWith(github.ref, 'refs/tags/v')"
     strategy:
       fail-fast: false
       matrix:
         include:
-          - DOCKER_FILE_PATH: "Dockerfile"
-            app_name: "hiring-motion-ui"
-            namespace: "hiringmotion"
-            type: "deployment"
-
-    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@main
+          - DOCKER_FILE_PATH: Dockerfile
+            app_name: smart-quiz-admin-ui
+            namespace: quizzing-pro-stage
+            type: deployment
+    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@ui-reusable
     with:
-      registry: gcr.io
+      IMAGE_REGISTRY: gcr.io
       username: _json_key
       GCR_PROJECT: zs-products
-      APP_NAME: ${{ matrix.app_name }}
+      APP_NAME: '${{ matrix.app_name }}'
       CLUSTER_NAME: products-cluster
-      NAMESPACE: ${{ matrix.namespace }}
+      NAMESPACE: '${{ matrix.namespace }}'
       CLUSTER_PROJECT: zs-products
-      TYPE: ${{ matrix.type }}
-
+      TYPE: '${{ matrix.type }}'
     secrets:
-      GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
-      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-      PAT: ${{ secrets.PAT }}
+      GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
+      DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'
