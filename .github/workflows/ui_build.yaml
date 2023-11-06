@@ -34,7 +34,9 @@ on:
         description: "commit sha for image"
         value: ${{ jobs.build.outputs.sha }}
 
-
+env:
+  event_flag: ${{ github.event_name == 'push' }}
+  branch_flag: ${{ github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}' }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -67,12 +69,12 @@ jobs:
           CI=false yarn test:coverage
 
       - name: Generate Coverage Badges
-        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -80,7 +82,7 @@ jobs:
       
 
       - name: Push Coverage Badge
-        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT}}
@@ -97,12 +99,12 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Generating build
-        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           ${{ inputs.BUILD_COMMAND }}
 
       - uses: actions/upload-artifact@v3
-        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         name: upload zipped build and node modules
         with:
           name: ${{ inputs.APP_NAME }}
