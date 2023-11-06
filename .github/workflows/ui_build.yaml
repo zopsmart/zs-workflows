@@ -47,6 +47,14 @@ jobs:
         with:
           node-version: ${{ inputs.NODE_VERSION }}
 
+      - name: Debugging Step
+        run: |
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "github.ref: ${{ github.ref }}"
+          echo "BRANCH_NAME: ${{ inputs.BRANCH_NAME }}"
+          echo 'refs/heads/${{ inputs.BRANCH_NAME }}'
+          echo  "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+
       - name: installing dependencies and zipping node modules
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
