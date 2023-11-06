@@ -73,7 +73,7 @@ jobs:
       - name: Check if tag exists
         id: tag-check
         run: |
-          if gcloud container images describe ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} 2>/dev/null; then
+          if gcloud container images describe ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} 2>/dev/null; then
               echo "tag_exists=true" >> "$GITHUB_OUTPUT"
           else
               echo "tag_exists=false" >> "$GITHUB_OUTPUT"
@@ -101,9 +101,6 @@ jobs:
 
       - name: Checkout Code
         uses: actions/checkout@v2
-     
-      - name: 'Echo download path'
-        run: echo ${{steps.download.outputs.download-path}}
 
       - name: Login to GCR
         uses: docker/login-action@v1
