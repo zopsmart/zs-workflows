@@ -67,12 +67,12 @@ jobs:
           CI=false yarn test:coverage
 
       - name: Generate Coverage Badges
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
+        if: (github.event_name == 'push') && github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
