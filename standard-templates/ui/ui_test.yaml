@@ -15,6 +15,12 @@ jobs:
     with:
       APP_NAME: smart-quiz-admin-ui
       NODE_VERSION: '16.x'
+      BUILD_COMMAND: |
+        CI=false yarn run build
+        tar -zcf smart-quiz-admin-ui.zip build
+      ARTIFACT_PATH: |
+        smart-quiz-admin-ui.zip
+        node_modules.zip
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
   stage_deployment:
@@ -41,6 +47,9 @@ jobs:
       CLUSTER_PROJECT: zs-products
       SHA: '${{ needs.build.outputs.SHA }}'
       TYPE: '${{ matrix.type }}'
+      UNZIP_COMMAND: |
+        tar -xf smart-quiz-admin-ui.zip
+        tar -xf node_modules.zip
     secrets:
       GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
       DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'
