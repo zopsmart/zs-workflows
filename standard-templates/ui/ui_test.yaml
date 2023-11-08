@@ -18,10 +18,13 @@ jobs:
       BUILD_COMMAND: |
         CI=false yarn run build
         tar -zcf smart-quiz-admin-ui.zip build
+      TEST_COMMAND: |
+        CI=false yarn test:coverage
       ARTIFACT_PATH: |
         smart-quiz-admin-ui.zip
         node_modules.zip
       PACKAGE_MANAGER: 'yarn'
+      LINTER_CHECKS: false
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
   stage_deployment:

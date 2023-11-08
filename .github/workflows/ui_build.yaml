@@ -18,6 +18,10 @@ on:
         description: 'node build command'
         required: true
         type: string
+      TEST_COMMAND:
+        description: 'command to run test files'
+        required: true
+        type: string
       ARTIFACT_PATH:
         description: "path used for build"
         required: true
@@ -31,7 +35,7 @@ on:
         description: 'package manager of node'
         required: true
         type: string
-      ENABLE_CHECKS:
+      LINTER_CHECKS:
         required: false
         type: boolean
         default: true
@@ -74,26 +78,26 @@ jobs:
           tar -zcf node_modules.zip node_modules/
 
       - name: run linter
-        if: ${{ inputs.ENABLE_CHECKS }}
+        if: ${{ inputs.LINTER_CHECKS }}
         run: |
           CI=false yarn lint
 
       - name: run prettier
-        if: ${{ inputs.ENABLE_CHECKS }}
+        if: ${{ inputs.LINTER_CHECKS }}
         run: |
           CI=false yarn prettier:check
 
       - name: run tests
         run: |
-          CI=false yarn test:coverage
+          ${{ inputs.TEST_COMMAND }}
 
       - name: Generate Coverage Badges
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.ENABLE_CHECKS }}
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }}
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.ENABLE_CHECKS }}
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -101,7 +105,7 @@ jobs:
       
 
       - name: Push Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.ENABLE_CHECKS }}
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT}}
