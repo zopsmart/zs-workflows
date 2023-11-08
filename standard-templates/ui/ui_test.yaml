@@ -21,6 +21,7 @@ jobs:
       ARTIFACT_PATH: |
         smart-quiz-admin-ui.zip
         node_modules.zip
+      PACKAGE_MANAGER: 'yarn'
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
   stage_deployment:
