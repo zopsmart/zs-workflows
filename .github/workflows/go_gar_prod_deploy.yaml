@@ -114,11 +114,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Verify
-        run: ls -la
-
-      - name: Directory
-        run: pwd
+      - name: Setup Helm Chart
+        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
 
       - name: Setup Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
@@ -128,7 +125,7 @@ jobs:
           export_default_credentials: true
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
       - name: Update Deployment Image
-        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+        run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} ./helm/service/ -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }}
