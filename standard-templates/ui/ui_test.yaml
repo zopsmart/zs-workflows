@@ -11,7 +11,7 @@ name: Build and Deploy
 jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: zopsmart/app-template/.github/workflows/ui_build.yaml@ui-gar-workflow
+    uses: zopsmart/app-template/.github/workflows/ui_yarn_build.yaml@ui-gar-workflow
     with:
       APP_NAME: smart-quiz-admin-ui
       NODE_VERSION: '16.x'
