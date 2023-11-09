@@ -15,19 +15,19 @@ on:
         type: string
       MYSQL_ENABLE:
         description: 'mysql should be installed or not'
-        required: true
+        required: false
         type: boolean
-        default: true
+        default: false
       POSTGRES_ENABLE:
         description: 'postgres should be installed or not'
-        required: true
+        required: false
         type: boolean
-        default: true
+        default: false
       REDIS_ENABLE:
         description: 'redis should be installed or not'
-        required: true
+        required: false
         type: boolean
-        default: true
+        default: false
     outputs:
       SHA:
         description: "commit sha for image"
