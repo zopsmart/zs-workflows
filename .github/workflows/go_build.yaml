@@ -13,6 +13,21 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
+      MYSQL_ENABLE:
+        description: 'mysql should be installed or not'
+        required: true
+        type: boolean
+        default: true
+      POSTGRES_ENABLE:
+        description: 'postgres should be installed or not'
+        required: true
+        type: boolean
+        default: true
+      REDIS_ENABLE:
+        description: 'redis should be installed or not'
+        required: true
+        type: boolean
+        default: true
     outputs:
       SHA:
         description: "commit sha for image"
@@ -36,21 +51,21 @@ jobs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
       mysql:
-        image: mysql:8.0.31
+        image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.31' || '' }}
         env:
           MYSQL_ROOT_PASSWORD: "password"
           MYSQL_DATABASE: "test"
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       postgres:
-        image: postgres:15.1
+        image: ${{ inputs.POSTGRES_ENABLE && 'postgres:15.1' || '' }}
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: postgres
           POSTGRES_DB: test
 
       redis:
-        image: redis:5.0.14
+        image: ${{ inputs.REDIS_ENABLE && 'redis:5.0.14' || '' }}
         options: "--entrypoint redis-server"
 
     steps:
