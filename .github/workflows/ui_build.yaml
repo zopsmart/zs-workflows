@@ -31,10 +31,6 @@ on:
         required: false
         type: string
         default: main
-      PACKAGE_MANAGER:
-        description: 'package manager of node'
-        required: true
-        type: string
       LINTER_CHECKS:
         required: false
         type: boolean
@@ -62,19 +58,10 @@ jobs:
           node-version: ${{ inputs.NODE_VERSION }}
 
       - name: installing dependencies and zipping node modules
-        if: ${{ inputs.PACKAGE_MANAGER == 'yarn' }}
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
           yarn install
-          tar -zcf node_modules.zip node_modules/
-
-      - name: installing dependencies and zipping node modules
-        if: ${{ inputs.PACKAGE_MANAGER == 'npm' }}
-        run: |
-          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
-          npm install
           tar -zcf node_modules.zip node_modules/
 
       - name: run linter
