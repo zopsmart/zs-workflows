@@ -79,12 +79,12 @@ jobs:
           ${{ inputs.TEST_COMMAND }}
 
       - name: Generate Coverage Badges
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }}
+        if: (github.event_name == 'push') && ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }})
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }}
+        if: (github.event_name == 'push') && ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }})
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -92,7 +92,7 @@ jobs:
       
 
       - name: Push Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }}
+        if: (github.event_name == 'push') && ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && ${{ inputs.LINTER_CHECKS }})
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT}}
