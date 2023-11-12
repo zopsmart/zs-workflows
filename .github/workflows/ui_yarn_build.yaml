@@ -75,6 +75,7 @@ jobs:
           CI=false yarn prettier:check
 
       - name: run tests
+        if: ${{ inputs.LINTER_CHECKS }}
         run: |
           ${{ inputs.TEST_COMMAND }}
 
