@@ -11,7 +11,7 @@ name: Build and Deploy
 jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: zopsmart/app-template/.github/workflows/ui_yarn_build.yaml@ui-reusable
+    uses: zopsmart/app-template/.github/workflows/ui_yarn_build.yaml@ui-gar-workflow
     with:
       APP_NAME: smart-quiz-admin-ui
       NODE_VERSION: '16.x'
@@ -35,7 +35,7 @@ jobs:
           - DOCKER_FILE_PATH: Dockerfile
             app_name: rlog-web
             namespace: rlog
-    uses: zopsmart/app-template/.github/workflows/ui_gar_stage_deploy.yaml@ui-reusable
+    uses: zopsmart/app-template/.github/workflows/ui_gar_stage_deploy.yaml@ui-gar-workflow
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       APP_NAME: '${{ matrix.app_name }}'
@@ -63,7 +63,7 @@ jobs:
           - DOCKER_FILE_PATH: Dockerfile
             app_name: rlog-web
             namespace: rlog
-    uses: zopsmart/app-template/.github/workflows/go_gar_prod_deploy.yaml@ui-reusable
+    uses: zopsmart/app-template/.github/workflows/go_gar_prod_deploy.yaml@ui-gar-workflow
     with:
       APP_NAME: '${{ matrix.app_name }}'
       IMAGE_REGISTRY: gcr.io
