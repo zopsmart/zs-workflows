@@ -38,10 +38,6 @@ on:
         description: 'go build command'
         required: true
         type: string
-      BUILD_ARGS:
-        description: "args used in dockerize"
-        required: false
-        type: string
 
       ARTIFACT_PATH:
         description: "path used for build with respect to main.go file"
@@ -58,6 +54,9 @@ on:
       GAR_KEY:
         description: 'required input'
         required: true
+      NPM_TOKEN:
+        description: 'npm token'
+        required: false
 
 
 
@@ -98,7 +97,7 @@ jobs:
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags:  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
           build-args: |
-            ${{ inputs.BUILD_ARGS }}
+            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
       - id: output-image
         run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
