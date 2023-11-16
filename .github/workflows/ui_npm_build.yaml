@@ -35,6 +35,10 @@ on:
         required: false
         type: boolean
         default: true
+      ENABLE_TESTS:
+        required: false
+        type: boolean
+        default: true
 
 
     outputs:
@@ -75,6 +79,7 @@ jobs:
           CI=false npm run prettier:check
 
       - name: run tests
+        if: ${{ inputs.ENABLE_TESTS }}
         run: |
           ${{ inputs.TEST_COMMAND }}
 

@@ -35,6 +35,10 @@ on:
         required: false
         type: boolean
         default: true
+      ENABLE_TESTS:
+        required: false
+        type: boolean
+        default: true
 
 
     outputs:
@@ -75,17 +79,17 @@ jobs:
           CI=false yarn prettier:check
 
       - name: run tests
-        if: ${{ inputs.LINTER_CHECKS }}
+        if: ${{ inputs.ENABLE_TESTS }}
         run: |
           ${{ inputs.TEST_COMMAND }}
 
       - name: Generate Coverage Badges
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.LINTER_CHECKS }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.LINTER_CHECKS }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -93,7 +97,7 @@ jobs:
       
 
       - name: Push Coverage Badge
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.LINTER_CHECKS }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT}}
