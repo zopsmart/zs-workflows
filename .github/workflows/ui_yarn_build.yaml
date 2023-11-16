@@ -20,7 +20,7 @@ on:
         type: string
       TEST_COMMAND:
         description: 'command to run test files'
-        required: true
+        required: false
         type: string
       ARTIFACT_PATH:
         description: "path used for build"
