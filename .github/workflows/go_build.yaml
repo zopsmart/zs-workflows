@@ -97,7 +97,7 @@ jobs:
 
       - id: output-sha
         run: |
-          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/main' ]]; then
+          if [ "${{ github.event_name }}" = 'push' ] && [ "${{ github.ref }}" = 'refs/heads/main' ]; then
             sha=$(git rev-parse HEAD)
           else
             sha="${{ github.sha }}"
