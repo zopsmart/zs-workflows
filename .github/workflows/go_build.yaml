@@ -13,6 +13,47 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
+      MYSQL_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      POSTGRES_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      REDIS_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      ZIPKIN_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      ELASTIC_SEARCH_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      KAFKA_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      MONGO_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      MSSQL_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      DYNAMODB_ENABLE:
+        required: false
+        type: boolean
+        default: false
+      CASSANDRA_ENABLE:
+        required: false
+        type: boolean
+        default: false
+
     outputs:
       SHA:
         description: "commit sha for image"
@@ -36,22 +77,60 @@ jobs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
       mysql:
-        image: mysql:8.0.31
+        image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.31' || '' }}
         env:
           MYSQL_ROOT_PASSWORD: "password"
           MYSQL_DATABASE: "test"
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
       postgres:
-        image: postgres:15.1
+        image: ${{ inputs.POSTGRES_ENABLE && 'postgres:15.1' || '' }}
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: postgres
           POSTGRES_DB: test
 
       redis:
-        image: redis:5.0.14
+        image: ${{ inputs.REDIS_ENABLE && 'redis:5.0.14' || '' }}
         options: "--entrypoint redis-server"
+
+      zipkin:
+        image: ${{ inputs.ZIPKIN_ENABLE && 'openzipkin/zipkin' || '' }}
+
+      elasticsearch:
+        image: ${{ inputs.ELASTIC_SEARCH_ENABLE && 'elasticsearch:6.8.6' || '' }}
+        env:
+          discovery type: "single-node"
+
+      kafka:
+        image: ${{ inputs.KAFKA_ENABLE && 'krisgeus/docker-kafka' || '' }}
+        env:
+          ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:2008,INTERNAL://localhost:2009'
+          LISTENERS: 'PLAINTEXT://0.0.0.0:2008,INTERNAL://0.0.0.0:2009'
+          SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT'
+          INTER_BROKER: 'INTERNAL'
+          KAFKA_CREATE_TOPICS: 'test-topic'
+          KAFKA_HOSTS: 'localhost:2008,localhost:2009'
+          KAFKA_TOPIC: 'test-topic'
+
+      mongo:
+        image: ${{ inputs.MONGO_ENABLE && 'mongo:6.0.2' || '' }}
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin123
+
+      mssql:
+        image: ${{ inputs.MSSQL_ENABLE && 'mcr.microsoft.com/mssql/server:2022-latest' || '' }}
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: reallyStrongPwd123
+
+      dynamodb:
+        image: ${{ inputs.DYNAMODB_ENABLE && 'amazon/dynamodb-local' || '' }}
+
+      cassandra:
+        image: ${{ inputs.CASSANDRA_ENABLE && 'cassandra:4.0.6' || '' }}
+        options: --health-cmd "cqlsh --debug"
 
     steps:
       - name: Check out code
