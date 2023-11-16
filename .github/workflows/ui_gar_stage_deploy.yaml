@@ -34,15 +34,6 @@ on:
         required: true
         type: string
 
-      BUILD_COMMAND:
-        description: 'go build command'
-        required: true
-        type: string
-
-      ARTIFACT_PATH:
-        description: "path used for build with respect to main.go file"
-        required: true
-        type: string
       SHA:
         type: string
         required: true
