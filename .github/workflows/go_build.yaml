@@ -176,7 +176,7 @@ jobs:
 
       - id: output-sha
         run: |
-          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/test-bash' \) -o \( "${{ github.ref }}" = 'refs/heads/test-bash1' \) ]; then
+          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
             sha=$(git rev-parse HEAD)
           else
             sha="${{ github.sha }}"
