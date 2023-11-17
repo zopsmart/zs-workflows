@@ -159,7 +159,7 @@ jobs:
           go tool cover -func=temp/coverage.out | tee temp/c.out
 
       - name: Generate and Commit Coverage Badge
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           go install github.com/AlexBeauchemin/gobadge@latest
           gobadge -filename=temp/c.out -target=$(pwd)/README.md
@@ -168,7 +168,7 @@ jobs:
           git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md"
 
       - name: Push Coverage Badge
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ github.token }}
@@ -176,7 +176,7 @@ jobs:
 
       - id: output-sha
         run: |
-          if [ "${{ github.event_name }}" = 'push' ] && [ "${{ github.ref }}" = 'refs/heads/main' ]; then
+          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/test-bash' \) -o \( "${{ github.ref }}" = 'refs/heads/test-bash1' \) ]; then
             sha=$(git rev-parse HEAD)
           else
             sha="${{ github.sha }}"
