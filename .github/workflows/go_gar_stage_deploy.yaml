@@ -30,6 +30,11 @@ on:
         description: 'path of docker file'
         required: true
         type: string
+      GO_VERSION:
+        description: 'go version'
+        required: false
+        type: string
+        default: '1.20'
 
       BUILD_COMMAND:
         description: 'go build command'
@@ -58,7 +63,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/zopsmart/gha-images:go-0.1.1
+      image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
       options: --rm
     steps:
       - name: Check out code
