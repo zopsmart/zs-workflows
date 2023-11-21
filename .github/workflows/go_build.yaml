@@ -66,7 +66,7 @@ on:
     secrets:
       PAT:
          description: 'pat of gofr'
-         required: true 
+         required: false
      
 jobs:
   test:
