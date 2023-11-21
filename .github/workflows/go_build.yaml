@@ -70,9 +70,6 @@ jobs:
     container:
       image: ghcr.io/zopsmart/gha-images:go-0.1.1
       options: --rm
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.PAT }}
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
