@@ -42,6 +42,12 @@ on:
         required: true
         type: string
 
+      GO_VERSION:
+        description: 'go version'
+        required: false
+        type: string
+        default: '1.20'
+
       BUILD_COMMAND:
         description: 'go build command'
         required: true
@@ -63,7 +69,7 @@ on:
     secrets:
       PAT:
         description: 'required input'
-        required: true
+        required: false
       GCR_KEY:
         description: 'required input'
         required: true
@@ -77,11 +83,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/zopsmart/gha-images:go-0.1.1
+      image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
       options: --rm
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.PAT }}
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -148,9 +151,6 @@ jobs:
       container:
         image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
         options: --rm
-        credentials:
-          username: ${{ github.actor }}
-          password: ${{ secrets.PAT }}
       name: 🚀 Deploy Stage
       env:
         image: ${{needs.dockerize.outputs.image}}

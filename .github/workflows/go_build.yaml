@@ -13,6 +13,11 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
+      GO_VERSION:
+        description: 'go version'
+        required: false
+        type: string
+        default: '1.20'
       MYSQL_ENABLE:
         required: false
         type: boolean
@@ -61,18 +66,15 @@ on:
     secrets:
       PAT:
          description: 'pat of gofr'
-         required: true 
+         required: false
      
 jobs:
   test:
     runs-on: ubuntu-latest
     name: test and linters
     container:
-      image: ghcr.io/zopsmart/gha-images:go-0.1.1
+      image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
       options: --rm
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.PAT }}
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:

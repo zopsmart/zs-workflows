@@ -46,7 +46,7 @@ on:
     secrets:
       PAT:
         description: 'required input'
-        required: true
+        required: false
       GCR_KEY:
         description: 'required input'
         required: true
@@ -127,9 +127,6 @@ jobs:
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
       options: --rm
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.PAT }}
     name: 🚀 Deploy Prod
     env:
       image: ${{needs.dockerize.outputs.image}}
