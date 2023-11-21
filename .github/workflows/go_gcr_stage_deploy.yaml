@@ -63,7 +63,7 @@ on:
     secrets:
       PAT:
         description: 'required input'
-        required: true
+        required: false
       GCR_KEY:
         description: 'required input'
         required: true
