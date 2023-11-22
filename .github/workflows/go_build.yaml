@@ -18,6 +18,15 @@ on:
         required: false
         type: string
         default: '1.20'
+      ADD_SCHEMA:
+        description: 'to load to database schema'
+        required: false
+        type: string
+        default: false
+      SCHEMA_FILE_PATH:
+        description: 'path of schema file'
+        required: false
+        type: string
       MYSQL_ENABLE:
         required: false
         type: boolean
@@ -137,6 +146,11 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+
+      - name: Add DB Schema
+        if: ${{ inputs.ADD_SCHEMA }}
+        run: |
+          mysql -u root -p password -h mysql < ${{ inputs.SCHEMA_FILE_PATH }}
 
       - name: Get dependencies
         run: |
