@@ -23,8 +23,8 @@ on:
         required: false
         type: string
         default: false
-      SCHEMA_FILE_PATH:
-        description: 'path of schema file'
+      SCHEMA_COMMAND:
+        description: 'command to load schema'
         required: false
         type: string
       MYSQL_ENABLE:
@@ -150,7 +150,7 @@ jobs:
       - name: Add DB Schema
         if: ${{ inputs.ADD_SCHEMA }}
         run: |
-          mysql -u root -p password -h mysql < ${{ inputs.SCHEMA_FILE_PATH }}
+          ${{ inputs.SCHEMA_COMMAND }}
 
       - name: Get dependencies
         run: |
