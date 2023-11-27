@@ -78,7 +78,6 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '${{ inputs.GO_VERSION }}'
-          cache: false
 
       - name: Get dependencies
         run: |
