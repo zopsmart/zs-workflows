@@ -48,6 +48,17 @@ on:
         type: string
         default: '1.20'
 
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: string
+        default: false
+
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
+
       BUILD_COMMAND:
         description: 'go build command'
         required: true
@@ -94,6 +105,11 @@ jobs:
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: Make Directory
         run: mkdir build

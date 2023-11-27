@@ -19,7 +19,7 @@ on:
         type: string
         default: '1.20'
       ADD_SCHEMA:
-        description: 'to load to database schema'
+        description: 'enable step to load schema'
         required: false
         type: string
         default: false
@@ -27,6 +27,18 @@ on:
         description: 'command to load schema'
         required: false
         type: string
+
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: string
+        default: false
+
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
+
       MYSQL_ENABLE:
         required: false
         type: boolean
@@ -157,6 +169,11 @@ jobs:
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3

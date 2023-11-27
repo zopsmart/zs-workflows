@@ -21,6 +21,22 @@ jobs:
       TESTCOVERAGE_THRESHOLD: 90
       APP_NAME: $APP_NAME
       POSTMAN_ENABLED: false
+      ADD_SCHEMA: "true or false, to add schema to db"
+      SCHEMA_COMMAND: "command to load schema to database,host = mysql, user = root , password = password, database test"
+      EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
+      DEPENDENCIES_COMMAND: |
+        "commands to install dependencies"
+        ""
+      MYSQL_ENABLE: "to enable service"
+      POSTGRES_ENABLE: "to enable service"
+      REDIS_ENABLE: "to enable service"
+      ZIPKIN_ENABLE: "to enable service"
+      ELASTIC_SEARCH_ENABLE: "to enable service"
+      KAFKA_ENABLE: "to enable service"
+      MONGO_ENABLE: "to enable service"
+      MSSQL_ENABLE: "to enable service"
+      DYNAMODB_ENABLE: "to enable service"
+      CASSANDRA_ENABLE: "to enable service"
     secrets:
       PAT: ${{secrets.PAT}}
 
@@ -32,13 +48,13 @@ jobs:
       matrix:
         include:
           - build_commands: "<build command>"
-            artifact_path: "based on build"
+            artifact_path: "based on build command"
             DOCKER_FILE_PATH: "."
             app_name: "app-name"
             namespace: "namespace-name"
-            type: "deployment"
-          - build_commands: "<build commadn>"
-            artifact_path: "based on build"
+            type: "deployment or cron"
+          - build_commands: "<build command>"
+            artifact_path: "based on build command"
             DOCKER_FILE_PATH: "./cron/"
             app_name: "cron-name"
             namespace: "namespace-name"
@@ -46,6 +62,10 @@ jobs:
     uses: zopsmart/app-template/.github/workflows/go_gcr_stage_deploy.yaml@main
 
     with:
+      EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
+      DEPENDENCIES_COMMAND: |
+        "commands to install dependencies"
+        ""
       BUILD_COMMAND: ${{ matrix.build_commands }}
       ARTIFACT_PATH: ${{ matrix.artifact_path }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
