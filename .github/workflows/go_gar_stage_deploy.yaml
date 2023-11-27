@@ -73,12 +73,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
-      options: --rm
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ inputs.GO_VERSION }}'
 
       - name: Get dependencies
         run: |

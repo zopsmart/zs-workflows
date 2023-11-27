@@ -93,9 +93,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: test and linters
-    container:
-      image: ghcr.io/zopsmart/gha-images:go-mysql${{ inputs.GO_VERSION }}
-      options: --rm
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
@@ -156,8 +153,10 @@ jobs:
         options: --health-cmd "cqlsh --debug"
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ inputs.GO_VERSION }}'
 
       - name: Add DB Schema
         if: ${{ inputs.ADD_SCHEMA }}
