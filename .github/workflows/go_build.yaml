@@ -97,11 +97,13 @@ jobs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
       mysql:
-        image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.31' || '' }}
+        image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.30' || '' }}
+        ports:
+          - "3306:3306"
         env:
-          MYSQL_ROOT_PASSWORD: "password"
           MYSQL_DATABASE: "test"
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          MYSQL_ROOT_PASSWORD: "password"
+          options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
 
       postgres:
         image: ${{ inputs.POSTGRES_ENABLE && 'postgres:15.1' || '' }}
