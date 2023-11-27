@@ -111,6 +111,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
+      - name: Extract Release Tag
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
       - name: Setup Helm Chart
         run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
 
@@ -123,6 +126,9 @@ jobs:
 
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Set App Version
+        run: kubectl set env deployment/${{ inputs.APP_NAME }} APP_VERSION=${{ env.RELEASE_VERSION }} --n ${{ inputs.NAMESPACE }}
 
       - name: Update Deployment Image
         run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} ./helm/service/ -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }}
