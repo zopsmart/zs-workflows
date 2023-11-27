@@ -157,6 +157,7 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '${{ inputs.GO_VERSION }}'
+          cache: false
 
       - name: Add DB Schema
         if: ${{ inputs.ADD_SCHEMA }}

@@ -97,8 +97,11 @@ jobs:
       image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
       options: --rm
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ inputs.GO_VERSION }}'
+          cache: false
 
       - name: Get dependencies
         run: |
