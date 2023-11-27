@@ -158,6 +158,12 @@ jobs:
         with:
           go-version: '${{ inputs.GO_VERSION }}'
 
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          args: --timeout 8m
+
       - name: Add DB Schema
         if: ${{ inputs.ADD_SCHEMA }}
         run: |
@@ -174,11 +180,6 @@ jobs:
         run: |
           ${{ inputs.DEPENDENCIES_COMMAND }}
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.54.2
-          args: --timeout 8m
 
       - name: Test
         run: |
@@ -235,7 +236,7 @@ jobs:
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
           GOFR_ENV=test go run main.go &
-          sleep 60
+          sleep 30
 
       - name: Install newman and Run Postman Collection
         if: ${{ inputs.POSTMAN_ENABLED }}

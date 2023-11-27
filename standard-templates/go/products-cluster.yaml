@@ -19,7 +19,7 @@ jobs:
     uses: zopsmart/app-template/.github/workflows/go_build.yaml@main
     with:
       TESTCOVERAGE_THRESHOLD: 90
-      APP_NAME: $APP_NAME
+      APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
       POSTMAN_ENABLED: false
       ADD_SCHEMA: "true or false, to add schema to db"
       SCHEMA_COMMAND: "command to load schema to database,host = mysql, user = root , password = password, database test"
