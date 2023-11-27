@@ -25,13 +25,13 @@ on:
         default: false
       SCHEMA_COMMAND:
         description: 'command to load schema'
-        required: boolean
+        required: false
         type: string
 
       EXTRA_DEPENDENCIES:
         description: 'enable step to install extra dependencies'
         required: false
-        type: string
+        type: boolean
         default: false
 
       DEPENDENCIES_COMMAND:
