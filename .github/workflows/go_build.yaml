@@ -165,6 +165,8 @@ jobs:
         with:
           version: v1.54.2
           args: --timeout 8m
+          skip-pkg-cache: true
+          skip-build-cache: true
 
       - name: Add DB Schema
         if: ${{ inputs.ADD_SCHEMA }}
