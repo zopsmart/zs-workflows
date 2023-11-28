@@ -49,7 +49,7 @@ jobs:
         include:
           - build_commands: "<build command>"
             artifact_path: "based on build command"
-            DOCKER_FILE_PATH: "."
+            DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
     uses: zopsmart/app-template/.github/workflows/go_gar_stage_deploy.yaml@main

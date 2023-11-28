@@ -51,13 +51,13 @@ jobs:
         include:
           - build_commands: "<build command>"
             artifact_path: "based on build command"
-            DOCKER_FILE_PATH: "."
+            DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "app-name"
             namespace: "namespace-name"
             type: "deployment or cron"
           - build_commands: "<build command>"
             artifact_path: "based on build command"
-            DOCKER_FILE_PATH: "./cron/"
+            DOCKER_FILE_PATH: "./cron/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
