@@ -29,16 +29,16 @@ jobs:
       DEPENDENCIES_COMMAND: |
         "commands to install dependencies"
         ""
-      MYSQL_ENABLE: "to enable service"
-      POSTGRES_ENABLE: "to enable service"
-      REDIS_ENABLE: "to enable service"
-      ZIPKIN_ENABLE: "to enable service"
-      ELASTIC_SEARCH_ENABLE: "to enable service"
-      KAFKA_ENABLE: "to enable service"
-      MONGO_ENABLE: "to enable service"
-      MSSQL_ENABLE: "to enable service"
-      DYNAMODB_ENABLE: "to enable service"
-      CASSANDRA_ENABLE: "to enable service"
+      MYSQL_ENABLE: "to enable MYSQL service"
+      POSTGRES_ENABLE: "to enable POSTGRES service"
+      REDIS_ENABLE: "to enable REDIS service"
+      ZIPKIN_ENABLE: "to enable ZIPKIN service"
+      ELASTIC_SEARCH_ENABLE: "to enable ELASTIC_SEARCH service"
+      KAFKA_ENABLE: "to enable KAFKA service"
+      MONGO_ENABLE: "to enable MONGO service"
+      MSSQL_ENABLE: "to enable MSSQL service"
+      DYNAMODB_ENABLE: "to enable DYNAMODB service"
+      CASSANDRA_ENABLE: "to enable CASSANDRA service"
     secrets:
       PAT: ${{secrets.PAT}}
 
