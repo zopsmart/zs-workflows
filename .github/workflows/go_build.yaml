@@ -88,7 +88,7 @@ on:
       PAT:
          description: 'pat of gofr'
          required: false
-     
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -117,7 +117,7 @@ jobs:
       redis:
         image: ${{ inputs.REDIS_ENABLE && 'redis:5.0.14' || '' }}
         ports:
-          - "3306:3306"
+          - "6379:6379"
         options: "--entrypoint redis-server"
 
       zipkin:
@@ -196,7 +196,7 @@ jobs:
         if: ${{ inputs.EXTRA_DEPENDENCIES }}
         run: |
           ${{ inputs.DEPENDENCIES_COMMAND }}
-          
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
