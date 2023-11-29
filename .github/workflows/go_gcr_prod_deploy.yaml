@@ -64,7 +64,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
@@ -100,7 +100,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Extract Release Tag
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
@@ -133,7 +133,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Verify
         run: ls -la
@@ -148,8 +148,14 @@ jobs:
           service_account_key: ${{ secrets.DEPLOY_KEY }}
           export_default_credentials: true
 
+      - name: Extract Release Tag
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Set App Version
+        run: kubectl set env deployment/${{ inputs.APP_NAME }} APP_VERSION=${{ env.RELEASE_VERSION }} --n ${{ inputs.NAMESPACE }}
 
       - name: Update Deployment Image
         if: ${{ inputs.TYPE == 'deployment' }}

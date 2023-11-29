@@ -48,6 +48,17 @@ on:
         type: string
         default: '1.20'
 
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: boolean
+        default: false
+
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
+
       BUILD_COMMAND:
         description: 'go build command'
         required: true
@@ -86,14 +97,21 @@ jobs:
       image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
       options: --rm
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ inputs.GO_VERSION }}'
 
       - name: Get dependencies
         run: |
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: Make Directory
         run: mkdir build
@@ -119,7 +137,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Download Artifacts
         uses: actions/download-artifact@v2
@@ -157,7 +175,7 @@ jobs:
 
       steps:
         - name: Checkout Code
-          uses: actions/checkout@v2
+          uses: actions/checkout@v4
 
         - name: Verify
           run: ls -la

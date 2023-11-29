@@ -18,6 +18,27 @@ on:
         required: false
         type: string
         default: '1.20'
+      ADD_SCHEMA:
+        description: 'enable step to load DB schema'
+        required: false
+        type: boolean
+        default: false
+      SCHEMA_COMMAND:
+        description: 'command to load DB schema'
+        required: false
+        type: string
+
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: boolean
+        default: false
+
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
+
       MYSQL_ENABLE:
         required: false
         type: boolean
@@ -72,18 +93,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: test and linters
-    container:
-      image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
-      options: --rm
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
       mysql:
-        image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.31' || '' }}
+        image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.30' || '' }}
+        ports:
+          - "3306:3306"
         env:
-          MYSQL_ROOT_PASSWORD: "password"
           MYSQL_DATABASE: "test"
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          MYSQL_ROOT_PASSWORD: "password"
+          options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
 
       postgres:
         image: ${{ inputs.POSTGRES_ENABLE && 'postgres:15.1' || '' }}
@@ -135,8 +155,23 @@ jobs:
         options: --health-cmd "cqlsh --debug"
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ inputs.GO_VERSION }}'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          args: --timeout 8m
+          skip-pkg-cache: true
+          skip-build-cache: true
+
+      - name: Add DB Schema
+        if: ${{ inputs.ADD_SCHEMA }}
+        run: |
+          ${{ inputs.SCHEMA_COMMAND }}
 
       - name: Get dependencies
         run: |
@@ -144,11 +179,11 @@ jobs:
           git config --global http.sslVerify false
           go mod download
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.54.2
-          args: --timeout 8m
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
+
 
       - name: Test
         run: |
@@ -205,7 +240,7 @@ jobs:
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
           GOFR_ENV=test go run main.go &
-          sleep 60
+          sleep 30
 
       - name: Install newman and Run Postman Collection
         if: ${{ inputs.POSTMAN_ENABLED }}
