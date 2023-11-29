@@ -19,12 +19,12 @@ on:
         type: string
         default: '1.20'
       ADD_SCHEMA:
-        description: 'enable step to load schema'
+        description: 'enable step to load DB schema'
         required: false
         type: boolean
         default: false
       SCHEMA_COMMAND:
-        description: 'command to load schema'
+        description: 'command to load DB schema'
         required: false
         type: string
 
