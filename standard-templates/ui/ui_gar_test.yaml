@@ -13,15 +13,17 @@ jobs:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     uses: zopsmart/app-template/.github/workflows/ui_yarn_build.yaml@ui-gar-workflow
     with:
-      APP_NAME: smart-quiz-admin-ui
-      NODE_VERSION: '16.x'
+      APP_NAME: rlog-web
+      NODE_VERSION: 'required node version'
       BUILD_COMMAND: |
         yarn build
         tar -zcf rlog-web.zip build
       ARTIFACT_PATH: |
         rlog-web.zip
         node_modules.zip
-      LINTER_CHECKS: true
+      LINTER_CHECKS: 'to enable linter checks, default is true'
+      PRETTIER_CHECKS: 'to enable prettier, default is true'
+      ENABLE_TESTS: 'to create coverage badge, default is true'
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
   stage_deployment:
