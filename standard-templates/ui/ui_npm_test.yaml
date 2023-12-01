@@ -23,7 +23,8 @@ jobs:
       ARTIFACT_PATH: |
         smart-quiz-candidate-ui.zip
         node_modules.zip
-      LINTER_CHECKS: true
+      LINTER_CHECKS: 'to enable linter checks, default is true'
+      ENABLE_TESTS: 'to create coverage badge, default is true'
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
   stage_deployment:
