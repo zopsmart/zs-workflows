@@ -19,8 +19,26 @@ jobs:
     uses: zopsmart/app-template/.github/workflows/go_build.yaml@main
     with:
       TESTCOVERAGE_THRESHOLD: 90
-      APP_NAME: $APP_NAME
+      APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
       POSTMAN_ENABLED: false
+      ADD_SCHEMA: "true or false, to add schema to db"
+      SCHEMA_COMMAND:  "command to load schema to database,
+                      mysql - host = 127.0.0.1, user = root , password = password, database test
+                      postgres - host = 127.0.0.1, user = postgres, password = password, database test"
+      EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
+      DEPENDENCIES_COMMAND: |
+        "commands to install dependencies"
+        ""
+      MYSQL_ENABLE: "to enable MYSQL service"
+      POSTGRES_ENABLE: "to enable POSTGRES service"
+      REDIS_ENABLE: "to enable REDIS service"
+      ZIPKIN_ENABLE: "to enable ZIPKIN service"
+      ELASTIC_SEARCH_ENABLE: "to enable ELASTIC_SEARCH service"
+      KAFKA_ENABLE: "to enable KAFKA service"
+      MONGO_ENABLE: "to enable MONGO service"
+      MSSQL_ENABLE: "to enable MSSQL service"
+      DYNAMODB_ENABLE: "to enable DYNAMODB service"
+      CASSANDRA_ENABLE: "to enable CASSANDRA service"
     secrets:
       PAT: ${{secrets.PAT}}
 
@@ -32,20 +50,24 @@ jobs:
       matrix:
         include:
           - build_commands: "<build command>"
-            artifact_path: "based on build"
-            DOCKER_FILE_PATH: "."
+            artifact_path: "based on build command"
+            DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "app-name"
             namespace: "namespace-name"
-            type: "deployment"
-          - build_commands: "<build commadn>"
-            artifact_path: "based on build"
-            DOCKER_FILE_PATH: "./cron/"
+            type: "deployment or cron"
+          - build_commands: "<build command>"
+            artifact_path: "based on build command"
+            DOCKER_FILE_PATH: "./cron/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
     uses: zopsmart/app-template/.github/workflows/go_gcr_stage_deploy.yaml@main
 
     with:
+      EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
+      DEPENDENCIES_COMMAND: |
+        "commands to install dependencies"
+        ""
       BUILD_COMMAND: ${{ matrix.build_commands }}
       ARTIFACT_PATH: ${{ matrix.artifact_path }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
