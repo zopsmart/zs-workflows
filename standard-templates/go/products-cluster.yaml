@@ -61,6 +61,11 @@ jobs:
             app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
+          - build_commands: "<build command>"
+            artifact_path: "based on build command"
+            DOCKER_FILE_PATH: "./script/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
+            app_name: "script-name"
+            namespace: "namespace-name"
     uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@main
 
     with:
