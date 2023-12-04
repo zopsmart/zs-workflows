@@ -16,7 +16,7 @@ env:
 jobs:
   test:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: zopsmart/app-template/.github/workflows/go_build.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@main
     with:
       TESTCOVERAGE_THRESHOLD: 90
       APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
@@ -61,7 +61,7 @@ jobs:
             app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-    uses: zopsmart/app-template/.github/workflows/go_gcr_stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@main
 
     with:
       EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
@@ -99,7 +99,7 @@ jobs:
           - app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-    uses: zopsmart/app-template/.github/workflows/go_gcr_prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@main
     with:
       registry: gcr.io
       username: _json_key

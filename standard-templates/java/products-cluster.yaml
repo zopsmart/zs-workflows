@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     if: (github.ref == 'refs/heads/development') || github.event_name == 'pull_request'
-    uses: zopsmart/app-template/.github/workflows/java_build.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@main
     secrets:
       GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
       GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
@@ -51,7 +51,7 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/app-template/.github/workflows/gcr_stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@main
 
   prod_deployment:
     if: ${{ startsWith(github.ref, 'refs/tags/v')}}
@@ -80,4 +80,4 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@main
