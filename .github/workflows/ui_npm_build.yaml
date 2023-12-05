@@ -39,6 +39,10 @@ on:
         required: false
         type: boolean
         default: true
+      DEPENDENCIES_FLAG:
+        required: false
+        type: string
+        default: ""
 
 
     outputs:
@@ -65,7 +69,7 @@ jobs:
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
-          npm install
+          npm install ${{ inputs.DEPENDENCIES_FLAG }}
           tar -zcf node_modules.zip node_modules/
 
       - name: run linter
