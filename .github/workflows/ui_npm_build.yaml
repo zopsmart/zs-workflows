@@ -35,6 +35,10 @@ on:
         required: false
         type: boolean
         default: true
+      PRETTIER_CHECKS:
+        required: false
+        type: boolean
+        default: true
       ENABLE_TESTS:
         required: false
         type: boolean
@@ -78,7 +82,7 @@ jobs:
           CI=false npm run lint
 
       - name: run prettier
-        if: ${{ inputs.LINTER_CHECKS }}
+        if: ${{ inputs.PRETTIER_CHECKS }}
         run: |
           CI=false npm run prettier:check
 
