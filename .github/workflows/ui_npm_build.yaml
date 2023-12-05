@@ -94,7 +94,7 @@ jobs:
       - name: Generate Coverage Badges
         if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
         run: |
-          CI=false yarn make-badges
+          CI=false npm run make-badges
 
       - name: Commit Badge changes
         if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
