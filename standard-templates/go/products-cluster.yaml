@@ -55,20 +55,17 @@ jobs:
             app_name: "app-name"
             namespace: "namespace-name"
             type: "deployment or cron"
-            deploy: "true or false, default is true" #whether you want to deploy the service
           - build_commands: "<build command>"
             artifact_path: "based on build command"
             DOCKER_FILE_PATH: "./cron/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-            deploy: "true or false, default is true" #whether you want to deploy the service
           - build_commands: "<build command>"
             artifact_path: "based on build command"
             DOCKER_FILE_PATH: "./script/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "script-name"
             namespace: "namespace-name"
-            deploy: "true or false, default is true" #whether you want to deploy the service
     uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@main
 
     with:
@@ -88,7 +85,6 @@ jobs:
       CLUSTER_PROJECT: zs-products
       SHA: ${{ needs.test.outputs.SHA }}
       TYPE: ${{ matrix.type }}
-      DEPLOY: ${{ matrix.deploy }}
 
 
     secrets:
@@ -105,11 +101,9 @@ jobs:
           - app_name: "app-name"
             namespace: "namespace-name"
             type: "deployment"
-            deploy: "true or false, default is true" #whether you want to deploy the service
           - app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-            deploy: "true or false, default is true" #whether you want to deploy the service
     uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@main
     with:
       registry: gcr.io
@@ -120,7 +114,6 @@ jobs:
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_PROJECT: zs-products
       TYPE: ${{ matrix.type }}
-      DEPLOY: ${{ matrix.deploy }}
 
     secrets:
       GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
