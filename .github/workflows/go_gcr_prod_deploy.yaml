@@ -42,6 +42,11 @@ on:
         description: "deployment or cron"
         required: false
         default: deployment
+      DEPLOY:
+        type: boolean
+        description: "deploy to stage or not"
+        required: false
+        default: true
 
     secrets:
       PAT:
@@ -124,6 +129,7 @@ jobs:
   prod_deployment:
     runs-on: ubuntu-latest
     needs: dockerize
+    if: ${{ inputs.DEPLOY }}
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
       options: --rm
