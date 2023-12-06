@@ -13,7 +13,7 @@ on:
 
 jobs:
   test:
-    uses: zopsmart/app-template/.github/workflows/go_build.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@main
     with:
       POSTMAN_ENABLED: false
       TESTCOVERAGE_THRESHOLD: 10
@@ -52,7 +52,7 @@ jobs:
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
-    uses: zopsmart/app-template/.github/workflows/go_gar_stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_stage_deploy.yaml@main
     with:
       EXTRA_DEPENDENCIES: "true or false, to add schema to db"
       DEPENDENCIES_COMMAND: |
@@ -83,7 +83,7 @@ jobs:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
-    uses: zopsmart/app-template/.github/workflows/go_gar_prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
