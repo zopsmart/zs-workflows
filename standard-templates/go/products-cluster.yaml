@@ -39,8 +39,6 @@ jobs:
       MSSQL_ENABLE: "to enable MSSQL service"
       DYNAMODB_ENABLE: "to enable DYNAMODB service"
       CASSANDRA_ENABLE: "to enable CASSANDRA service"
-    secrets:
-      PAT: ${{secrets.PAT}}
 
   stage_deployment:
     needs: [ test ]
@@ -90,7 +88,6 @@ jobs:
     secrets:
       GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-      PAT: ${{ secrets.PAT }}
 
   prod_deployment:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -118,4 +115,3 @@ jobs:
     secrets:
       GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-      PAT: ${{ secrets.PAT }}

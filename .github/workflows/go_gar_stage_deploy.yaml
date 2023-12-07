@@ -82,8 +82,6 @@ jobs:
 
       - name: Get dependencies
         run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-          git config --global http.sslVerify false
           go mod download
 
       - name: Extra dependencies

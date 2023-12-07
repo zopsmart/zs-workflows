@@ -44,9 +44,6 @@ on:
         default: deployment
 
     secrets:
-      PAT:
-        description: 'required input'
-        required: false
       GCR_KEY:
         description: 'required input'
         required: true
