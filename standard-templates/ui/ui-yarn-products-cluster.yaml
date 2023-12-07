@@ -11,7 +11,7 @@ name: Build and Deploy
 jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: zopsmart/app-template/.github/workflows/ui_yarn_build.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn_build.yaml@main
     with:
       APP_NAME: smart-quiz-admin-ui
       NODE_VERSION: '16.x'
@@ -40,7 +40,7 @@ jobs:
             app_name: smart-quiz-admin-ui
             namespace: quizzing-pro-stage
             type: deployment
-    uses: zopsmart/app-template/.github/workflows/ui_stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@main
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       APP_NAME: '${{ matrix.app_name }}'
@@ -68,7 +68,7 @@ jobs:
             app_name: smart-quiz-admin-ui
             namespace: quizzing-pro-stage
             type: deployment
-    uses: zopsmart/app-template/.github/workflows/gcr_prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@main
     with:
       IMAGE_REGISTRY: gcr.io
       username: _json_key
