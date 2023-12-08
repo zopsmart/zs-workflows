@@ -79,13 +79,16 @@ on:
 
 
     secrets:
+      PAT:
+        description: 'required input'
+        required: false
       GCR_KEY:
         description: 'required input'
         required: true
       DEPLOY_KEY:
         description: 'required input'
         required: true
-        
+
 
 
 jobs:
@@ -99,6 +102,8 @@ jobs:
 
       - name: Get dependencies
         run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
           go mod download
 
       - name: Extra dependencies
