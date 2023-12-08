@@ -91,9 +91,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/zopsmart/gha-images:go-v${{ inputs.GO_VERSION }}
-      options: --rm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
