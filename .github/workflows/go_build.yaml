@@ -84,10 +84,6 @@ on:
       SHA:
         description: "commit sha for image"
         value: ${{ jobs.test.outputs.sha }}
-    secrets:
-      PAT:
-         description: 'pat of gofr'
-         required: false
 
 jobs:
   test:
@@ -188,8 +184,6 @@ jobs:
 
       - name: Get dependencies
         run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-          git config --global http.sslVerify false
           go mod download
 
       - name: Extra dependencies
