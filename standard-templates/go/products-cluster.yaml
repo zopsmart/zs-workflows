@@ -40,7 +40,7 @@ jobs:
       DYNAMODB_ENABLE: "to enable DYNAMODB service"
       CASSANDRA_ENABLE: "to enable CASSANDRA service"
     secrets:
-      PAT: ${{secrets.PAT}}
+      PAT: ${{ secrets.PAT }}
 
   stage_deployment:
     needs: [ test ]
