@@ -121,6 +121,9 @@ jobs:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to Prod
     needs: dockerize_prod
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.2
+      options: --rm
     env:
       image: ${{needs.dockerize_prod.outputs.image}}
     steps:
@@ -129,11 +132,9 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: ${{inputs.PROJECT_NAME}}
+          project_id: ${{ inputs.PROJECT_NAME }}
           service_account_key: ${{ secrets.DEPLOY_KEY }}
           export_default_credentials: true
-      - name: Update Kubectl component
-        run: gcloud --quiet components update kubectl
 
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --zone=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
