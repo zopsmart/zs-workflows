@@ -106,12 +106,13 @@ jobs:
     env:
       image: ${{needs.dockerize_stage.outputs.image}}
     steps:
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
         with:
-          project_id: ${{inputs.PROJECT_NAME}}
-          service_account_key: ${{ secrets.DEPLOY_KEY}}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --zone=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}

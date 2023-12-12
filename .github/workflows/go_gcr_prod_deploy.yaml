@@ -63,12 +63,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
         with:
-          project_id: ${{ env.CLUSTER_PROJECT }}
-          service_account_key: ${{ secrets.GCR_KEY }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.GCR_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Check if tag exists
         id: tag-check
@@ -138,12 +139,13 @@ jobs:
       - name: Directory
         run: pwd
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v0
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
         with:
-          project_id: ${{ inputs.CLUSTER_PROJECT }}
-          service_account_key: ${{ secrets.DEPLOY_KEY }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Extract Release Tag
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
