@@ -1,27 +1,23 @@
-name: "checkout and build"
+name: "test and linters"
 on:
   workflow_call:
     inputs:
-      APP_NAME:
-        type: string
-        required: true
       IMAGE_REGISTRY:
         type: string
         required: true
       username:
         type: string
         required: true
-      PROJECT_NAME:
-        type: string
-        required: true
-      DOCKER_FILE_PATH:
-        description: 'path of docker file'
-        required: true
-        type: string
-      NAMESPACE:
+      GCR_PROJECT:
         description: 'required input'
         required: true
         type: string
+      APP_NAME:
+        type: string
+        required: true
+      SHA:
+        type: string
+        required: true
       CLUSTER_NAME:
         description: 'required input'
         required: true
@@ -30,31 +26,25 @@ on:
         description: 'required input'
         required: true
         type: string
-      GCR_PROJECT:
+      DOCKER_FILE_PATH:
+        description: 'path of docker file'
+        required: true
+        type: string
+      NAMESPACE:
         description: 'required input'
         required: true
         type: string
-      SHA:
-        type: string
-        required: true
       TYPE:
-        type: string
-        description: "deployment or cron"
-        required: false
-        default: deployment
-      ARTIFACT_PATH:
-        description: "path used for build with respect to main.go file"
         required: true
         type: string
-      ARTIFACT_NAME:
-        description: "name of the built artifacts"
-        required: true
-        type: string
+      UNZIP_COMMAND:
+         required: true
+         type: string
+
     secrets:
       GCR_KEY:
         description: 'required input'
         required: true
-
       DEPLOY_KEY:
         description: 'required input'
         required: true
@@ -64,29 +54,33 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.output-image.outputs.image }}
-    name: 🐳 Dockerize - Stage
+    name: 🐳 Dockerize Stage    
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: ${{ inputs.ARTIFACT_NAME }}
-          path: ${{ inputs.ARTIFACT_PATH }}
-
-      - name: 'Echo download path'
-        run: echo ${{steps.download.outputs.download-path}}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to GCR
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ${{ inputs.IMAGE_REGISTRY }}
-          username: _json_key
+          username: ${{ inputs.username }}
           password: ${{ secrets.GCR_KEY }}
- 
-      - name: Build and Push Leave Update Image
-        uses: docker/build-push-action@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.APP_NAME }}
+
+      - name: Unzipping artifacts
+        id: tag
+        run: |
+          ${{ inputs.UNZIP_COMMAND }}
+
+      - name: Build and Push Image Stage
+        uses: docker/build-push-action@v4
         with:
           push: true
           context: .
@@ -95,7 +89,7 @@ jobs:
 
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
-   
+
   stage_deployment:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to Stage
@@ -105,16 +99,18 @@ jobs:
       options: --rm
     env:
       image: ${{needs.dockerize_stage.outputs.image}}
+
     steps:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: ${{inputs.PROJECT_NAME}}
+          project_id: ${{inputs.CLUSTER_PROJECT}}
           service_account_key: ${{ secrets.DEPLOY_KEY}}
           export_default_credentials: true
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --zone=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+        run:
+          gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --zone=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
       - name: Update Deployment Image
         if: ${{ inputs.TYPE == 'deployment' }}

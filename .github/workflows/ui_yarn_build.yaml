@@ -1,0 +1,132 @@
+name: "test and linters"
+on:
+  workflow_call:
+    secrets:
+      PAT:
+         description: 'github token'
+         required: true
+
+    inputs:
+      APP_NAME:
+          description: 'name of ui service'
+          required: true
+          type: string
+      NODE_VERSION:
+          description: 'node version'
+          type: string
+          required: true
+      BUILD_COMMAND:
+        description: 'node build command'
+        required: true
+        type: string
+      TEST_COMMAND:
+        description: 'command to run test files'
+        required: false
+        type: string
+      ARTIFACT_PATH:
+        description: "path used for build"
+        required: true
+        type: string
+      BRANCH_NAME:
+        description: 'name of branch main/master'
+        required: false
+        type: string
+        default: main
+      LINTER_CHECKS:
+        required: false
+        type: boolean
+        default: true
+      ENABLE_TESTS:
+        required: false
+        type: boolean
+        default: true
+      PRETTIER_CHECKS:
+        required: false
+        type: boolean
+        default: true
+
+
+    outputs:
+      SHA:
+        description: "commit sha for image"
+        value: ${{ jobs.build.outputs.sha }}
+
+env:
+  event_flag: ${{ github.event_name == 'push' }}
+  branch_flag: ${{ github.ref == 'refs/heads/${{ inputs.BRANCH_NAME }}' }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: 🧪 Test and 🔨 Build
+    outputs:
+      sha: ${{ steps.output-sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
+      - name: installing dependencies and zipping node modules
+        run: |
+          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
+          yarn install
+          tar -zcf node_modules.zip node_modules/
+
+      - name: run linter
+        if: ${{ inputs.LINTER_CHECKS }}
+        run: |
+          CI=false yarn lint
+
+      - name: run prettier
+        if: ${{ inputs.PRETTIER_CHECKS }}
+        run: |
+          CI=false yarn prettier:check
+
+      - name: run tests
+        if: ${{ inputs.ENABLE_TESTS }}
+        run: |
+          ${{ inputs.TEST_COMMAND }}
+
+      - name: Generate Coverage Badges
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
+        run: |
+          CI=false yarn make-badges
+
+      - name: Commit Badge changes
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git diff --quiet --exit-code README.md || git commit -a -m "Update badges in README.md file"
+      
+
+      - name: Push Coverage Badge
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.ENABLE_TESTS }}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.PAT}}
+          branch: ${{github.ref}}
+
+      - id: output-sha
+        run: |
+          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/${{ inputs.BRANCH_NAME }}' ]]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Generating build
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          ${{ inputs.BUILD_COMMAND }}
+
+      - uses: actions/upload-artifact@v3
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        name: upload zipped build and node modules
+        with:
+          name: ${{ inputs.APP_NAME }}
+          path: |
+            ${{ inputs.ARTIFACT_PATH }}

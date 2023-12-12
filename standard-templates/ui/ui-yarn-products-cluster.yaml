@@ -1,0 +1,83 @@
+name: Build and Deploy
+'on':
+  pull_request:
+    types:
+      - review_requested
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+jobs:
+  build:
+    if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn_build.yaml@main
+    with:
+      APP_NAME: smart-quiz-admin-ui
+      NODE_VERSION: '16.x'
+      BUILD_COMMAND: |
+        CI=false yarn run build
+        tar -zcf smart-quiz-admin-ui.zip build
+      TEST_COMMAND: |
+        CI=false yarn test:coverage
+      ARTIFACT_PATH: |
+        smart-quiz-admin-ui.zip
+        node_modules.zip
+      LINTER_CHECKS: 'to enable linter checks, default is true'
+      PRETTIER_CHECKS: 'to enable prettier, default is true'
+      ENABLE_TESTS: 'to create coverage badge, default is true'
+    secrets:
+      PAT: '${{ secrets.GITHUB_TOKEN }}'
+  stage_deployment:
+    needs:
+      - build
+    if: (github.ref == 'refs/heads/main')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - DOCKER_FILE_PATH: Dockerfile
+            app_name: smart-quiz-admin-ui
+            namespace: quizzing-pro-stage
+            type: deployment
+    uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@main
+    with:
+      DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
+      APP_NAME: '${{ matrix.app_name }}'
+      NAMESPACE: '${{ matrix.namespace }}'
+      IMAGE_REGISTRY: gcr.io
+      username: _json_key
+      GCR_PROJECT: zs-products
+      CLUSTER_NAME: products-cluster
+      CLUSTER_PROJECT: zs-products
+      SHA: '${{ needs.build.outputs.SHA }}'
+      TYPE: '${{ matrix.type }}'
+      UNZIP_COMMAND: |
+        tar -xf smart-quiz-admin-ui.zip
+        tar -xf node_modules.zip
+    secrets:
+      GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
+      DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'
+  prod_deployment:
+    if: "startsWith(github.ref, 'refs/tags/v')"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - DOCKER_FILE_PATH: Dockerfile
+            app_name: smart-quiz-admin-ui
+            namespace: quizzing-pro-stage
+            type: deployment
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@main
+    with:
+      IMAGE_REGISTRY: gcr.io
+      username: _json_key
+      GCR_PROJECT: zs-products
+      APP_NAME: '${{ matrix.app_name }}'
+      CLUSTER_NAME: products-cluster
+      NAMESPACE: '${{ matrix.namespace }}'
+      CLUSTER_PROJECT: zs-products
+      TYPE: '${{ matrix.type }}'
+    secrets:
+      GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
+      DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'

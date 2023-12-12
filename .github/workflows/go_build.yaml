@@ -86,8 +86,8 @@ on:
         value: ${{ jobs.test.outputs.sha }}
     secrets:
       PAT:
-         description: 'pat of gofr'
-         required: false
+        description: 'pat of gofr'
+        required: false
 
 jobs:
   test:

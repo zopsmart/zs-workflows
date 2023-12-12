@@ -1,0 +1,88 @@
+name: Build and Deploy
+
+on:
+  pull_request:
+    types:
+      - review_requested
+    branches:
+      - main
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+
+jobs:
+  build:
+    if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@ui-gar-workflow
+    with:
+      APP_NAME: ${{ vars.PROD_APP_NAME }}
+      NODE_VERSION: '18.x'
+      DEPENDENCIES_FLAG: --legacy-peer-deps
+      BUILD_COMMAND: |
+        commands to build
+      TEST_COMMAND: |
+        CI=false npm run test:coverage
+      ARTIFACT_PATH: | 
+        based on build command e.g - 
+        zs-cloud-ui.zip
+        node_modules.zip
+      LINTER_CHECKS: true
+      PRETTIER_CHECKS: true
+      ENABLE_TESTS: false
+    secrets:
+      PAT: '${{ secrets.PAT }}'
+
+  stage_deployment:
+    needs:
+      - build
+    if: (github.ref == 'refs/heads/main')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - DOCKER_FILE_PATH: .
+            app_name: ${{ vars.STAGE_APP_NAME }}
+            namespace: ${{ vars.STAGE_NAMESPACE }}
+
+    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@ui-gar-workflow
+    with:
+      DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
+      APP_NAME: '${{ matrix.app_name }}'
+      NAMESPACE: '${{ matrix.namespace }}'
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
+      GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
+      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
+      CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
+      HELM_VALUES_PATH: './helm-values/stage.yaml'
+      SHA: '${{ needs.build.outputs.SHA }}'
+      UNZIP_COMMAND: |
+        based on artifact path
+        tar -xf zs-cloud-ui.zip
+        tar -xf node_modules.zip
+    secrets:
+      GAR_KEY: '${{ secrets.STAGE_DEPLOY_KEY }}'
+      PAT: '${{ secrets.STAGE_PAT }}'
+  prod_deployment:
+    if: "startsWith(github.ref, 'refs/tags/v')"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app_name: ${{ vars.PROD_APP_NAME }}
+            namespace: ${{ vars.PROD_NAMESPACE }}
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@ui-gar-workflow
+    with:
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
+      GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
+      APP_NAME: '${{ matrix.app_name }}'
+      CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
+      CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
+      HELM_VALUES_PATH: './helm-values/prod.yaml'
+      NAMESPACE: '${{ matrix.namespace }}'
+    secrets:
+      GAR_KEY: '${{ secrets.STAGE_DEPLOY_KEY }}'
+      PAT: '${{ secrets.PROD_PAT }}'
