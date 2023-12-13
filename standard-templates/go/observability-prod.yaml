@@ -37,7 +37,8 @@ jobs:
       DYNAMODB_ENABLE: "to enable DYNAMODB service"
       CASSANDRA_ENABLE: "to enable CASSANDRA service"
     secrets:
-      PAT: ${{ secrets.PAT }}
+      PAT: ${{ secrets.PAT }} // not a mandatory field
+
 
   stage_deployment:
     needs: [ test ]
@@ -70,7 +71,7 @@ jobs:
       HELM_VALUES_PATH: ./helm-values/stage.yaml
       SHA: ${{ needs.test.outputs.SHA }}
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }}
+      PAT: ${{ secrets.STAGE_PAT }}  
       GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
 
   containerize_and_push_prod:
