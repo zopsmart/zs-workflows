@@ -38,6 +38,11 @@ on:
         type: string
         required: true
 
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
+
     secrets:
       PAT:
         description: 'required input'
@@ -88,7 +93,7 @@ jobs:
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags:  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
           build-args: |
-            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+            ${{ inputs.BUILD_ARGUMENTS }}
       - id: output-image
         run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
