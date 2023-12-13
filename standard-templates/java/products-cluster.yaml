@@ -38,6 +38,9 @@ jobs:
       username: _json_key
       PROJECT_NAME: "zs-products"
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
+      BUILD_ARGUMENTS: |
+        VERSION=edge
+        APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_NAME: products-cluster

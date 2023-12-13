@@ -61,6 +61,9 @@ jobs:
       BUILD_COMMAND: ${{ matrix.build_commands }}
       ARTIFACT_PATH: ${{ matrix.artifact_path }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
+      BUILD_ARGUMENTS: |
+        VERSION=edge
+        APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev

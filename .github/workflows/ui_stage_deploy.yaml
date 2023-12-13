@@ -40,6 +40,10 @@ on:
       UNZIP_COMMAND:
          required: true
          type: string
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
 
     secrets:
       GCR_KEY:
@@ -86,6 +90,8 @@ jobs:
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}
           tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"

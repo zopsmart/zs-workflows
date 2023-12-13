@@ -43,6 +43,9 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@main
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
+      BUILD_ARGUMENTS: |
+        VERSION=edge
+        APP_NAME=main
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
       IMAGE_REGISTRY: gcr.io
