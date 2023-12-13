@@ -76,7 +76,10 @@ on:
         description: "deployment or cron"
         required: false
         default: deployment
-
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
 
     secrets:
       PAT:
@@ -158,6 +161,8 @@ jobs:
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
