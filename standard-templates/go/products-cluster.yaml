@@ -39,6 +39,8 @@ jobs:
       MSSQL_ENABLE: "to enable MSSQL service"
       DYNAMODB_ENABLE: "to enable DYNAMODB service"
       CASSANDRA_ENABLE: "to enable CASSANDRA service"
+    secrets:
+      PAT: ${{ secrets.PAT }} // not a mandatory field
 
   stage_deployment:
     needs: [ test ]
@@ -78,16 +80,16 @@ jobs:
       NAMESPACE: ${{ matrix.namespace }}
       registry: gcr.io
       username: _json_key
-      GCR_PROJECT: zs-products
+      GCR_PROJECT: zs-products # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       SHA: ${{ needs.test.outputs.SHA }}
       TYPE: ${{ matrix.type }}
 
-
     secrets:
       GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+      PAT: ${{ secrets.PAT }}
 
   prod_deployment:
     if: startsWith(github.ref, 'refs/tags/v')
