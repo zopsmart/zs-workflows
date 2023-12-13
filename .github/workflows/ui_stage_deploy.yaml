@@ -106,9 +106,6 @@ jobs:
         with:
           credentials_json: ${{ secrets.DEPLOY_KEY }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
       - name: Set GCloud Project and Fetch Cluster Credentials
         run:
           gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --zone=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}

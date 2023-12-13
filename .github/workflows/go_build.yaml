@@ -92,7 +92,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: test and linters
+    name: 🧪 Test and linters
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:

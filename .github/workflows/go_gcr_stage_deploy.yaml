@@ -128,6 +128,7 @@ jobs:
           path: ${{ inputs.DOCKER_FILE_PATH }}/${{ inputs.ARTIFACT_PATH }}
 
   dockerize:
+    name: 🐳 Dockerize Stage
     runs-on: ubuntu-latest
     needs: [ build ]
     outputs:
@@ -185,9 +186,6 @@ jobs:
           uses: google-github-actions/auth@v1
           with:
             credentials_json: ${{ secrets.DEPLOY_KEY }}
-
-        - name: Set up Cloud SDK
-          uses: google-github-actions/setup-gcloud@v1
 
         - name: Set GCloud Project and Fetch Cluster Credentials
           run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}

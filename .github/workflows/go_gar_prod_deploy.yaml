@@ -52,9 +52,6 @@ jobs:
         with:
           credentials_json: ${{ secrets.GAR_KEY }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
       - name: Check if tag exists
         id: tag-check
         run: |
@@ -74,7 +71,7 @@ jobs:
 
   dockerize:
     runs-on: ubuntu-latest
-    name: 🐳 Dockerize - Prod
+    name: 🐳 Dockerize Prod
     needs: check-tag
     if: ${{ needs.check-tag.outputs.tag_exists == 'true' }}
 
@@ -104,7 +101,7 @@ jobs:
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
       options: --rm
-    name: 🚀 Deploy Prod
+    name: 🚀 Deploy to Prod
     env:
       image: ${{needs.dockerize.outputs.image}}
 
