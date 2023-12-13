@@ -49,6 +49,9 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@ui-gar-workflow
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
+      BUILD_ARGUMENTS: |
+        VERSION=edge
+        APP_NAME=main
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
