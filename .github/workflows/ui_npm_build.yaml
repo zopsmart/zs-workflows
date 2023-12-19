@@ -87,6 +87,7 @@ jobs:
           node-version: ${{ inputs.NODE_VERSION }}
 
       - uses: webfactory/ssh-agent@v0.4.1
+        if: ${{ inputs.SSH_AGENT }}
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
 
