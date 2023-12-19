@@ -5,6 +5,9 @@ on:
       PAT:
         description: 'github token'
         required: true
+      SSH_KEY:
+        description: 'ssh key'
+        required: false
     inputs:
       APP_NAME:
         description: 'name of ui service'
@@ -47,6 +50,20 @@ on:
         required: false
         type: string
         default: ""
+      SSH_AGENT:
+        description: 'enable ssh agent'
+        required: false
+        type: boolean
+        default: true
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: boolean
+        default: false
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
 
 
     outputs:
@@ -120,6 +137,15 @@ jobs:
           fi
           echo "$sha"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: webfactory/ssh-agent@v0.4.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: Generating build
         if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
