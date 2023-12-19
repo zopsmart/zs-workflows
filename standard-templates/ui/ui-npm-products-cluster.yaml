@@ -25,8 +25,14 @@ jobs:
         node_modules.zip
       LINTER_CHECKS: 'to enable linter checks, default is true'
       ENABLE_TESTS: 'to create coverage badge, default is true'
+      SSH_AGENT: "true or false to setup web ssh agent. Default is false"
+      EXTRA_DEPENDENCIES: "true or false , to load extra dependencies. Default value is false"
+      DEPENDENCIES_COMMAND: |
+        "commands to install dependencies"
+        ""
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
+      SSH_KEY: '${{ secrets.ZOPSMART_SSH_KEY }}' #not a mandatory field. Required to install web ssh agent
   stage_deployment:
     needs:
       - build
