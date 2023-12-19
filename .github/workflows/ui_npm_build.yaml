@@ -86,6 +86,15 @@ jobs:
         with:
           node-version: ${{ inputs.NODE_VERSION }}
 
+      - uses: webfactory/ssh-agent@v0.4.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
+
       - name: installing dependencies and zipping node modules
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
@@ -137,15 +146,6 @@ jobs:
           fi
           echo "$sha"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-      - uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
-
-      - name: Extra dependencies
-        if: ${{ inputs.EXTRA_DEPENDENCIES }}
-        run: |
-          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: Generating build
         if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
