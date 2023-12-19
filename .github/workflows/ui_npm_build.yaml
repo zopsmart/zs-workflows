@@ -54,7 +54,7 @@ on:
         description: 'enable ssh agent'
         required: false
         type: boolean
-        default: true
+        default: false
       EXTRA_DEPENDENCIES:
         description: 'enable step to install extra dependencies'
         required: false
