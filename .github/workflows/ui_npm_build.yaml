@@ -86,6 +86,13 @@ jobs:
         with:
           node-version: ${{ inputs.NODE_VERSION }}
 
+      - name: Cache Node Modules
+        id: cache-node-modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+
       - uses: webfactory/ssh-agent@v0.4.1
         if: ${{ inputs.SSH_AGENT }}
         with:
