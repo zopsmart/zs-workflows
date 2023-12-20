@@ -1,0 +1,33 @@
+name: "stage deploy"
+on:
+  workflow_call:
+    inputs:
+      APP_NAME:
+        description: 'name of ui service'
+        required: true
+        type: string
+      NODE_VERSION:
+        description: 'node version'
+        type: string
+        required: true
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: boolean
+        default: false
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
+
+jobs:
+  ex:
+    runs-on: ubuntu
+    steps:
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
+      - name: Test
+        run: |
+          cat .env

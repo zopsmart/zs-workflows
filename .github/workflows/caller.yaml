@@ -1,0 +1,28 @@
+name: Themes CI-CD
+on:
+  push:
+    tags:
+      - "*"
+    branches:
+      - test
+env:
+  BUGSNAG_API_KEY: dhdh
+  STATIC_SERVER_PATH: https://storage.googleapis.com/zopping-uploads/themes/files
+  CLOUD_STORAGE_KEY: dabdvba
+
+jobs:
+  build:
+    uses: zopsmart/zs-workflows/.github/workflows/test.yaml@test
+    with:
+      APP_NAME: themes
+      NODE_VERSION: 18.x
+      EXTRA_DEPENDENCIES: true
+      DEPENDENCIES_COMMAND: |
+        touch .env
+        echo BUGSNAG_API_KEY=$BUGSNAG_API_KEY >> .env
+        cat .env
+        echo $CLOUD_STORAGE_KEY >> ~/gcp-storage-key.json
+        gcloud auth activate-service-account --key-file ~/gcp-storage-key.json
+        gcloud storage cp --recursive --gzip-local js .next/static/ gs://zopping-uploads/themes/files/_next/
+
+
