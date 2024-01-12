@@ -9,9 +9,6 @@ name: Build and Deploy
     branches:
       - main
 
-env:
-  NPM_TOKEN: ${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }}
-
 jobs:
   build:
     if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
