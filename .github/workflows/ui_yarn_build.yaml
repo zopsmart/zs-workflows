@@ -5,6 +5,9 @@ on:
       PAT:
          description: 'github token'
          required: true
+      NPM_TOKEN:
+        description: 'npm token'
+        required: true
 
     inputs:
       APP_NAME:
@@ -69,7 +72,7 @@ jobs:
       - name: installing dependencies and zipping node modules
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
           yarn install
           tar -zcf node_modules.zip node_modules/
 
