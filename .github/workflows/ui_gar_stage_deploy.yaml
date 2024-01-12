@@ -33,6 +33,10 @@ on:
       UNZIP_COMMAND:
         required: true
         type: string
+      CREATE_NPMRC:
+        required: false
+        type: boolean
+        default: false
 
       SHA:
         type: string
@@ -80,6 +84,12 @@ jobs:
         with:
           name: ${{ inputs.APP_NAME }}
 
+      - name: Create .npmrc File
+        if: ${{ inputs.CREATE_NPMRC }}
+        run: |
+          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+
       - name: Unzipping artifacts
         id: tag
         run: |
@@ -93,6 +103,7 @@ jobs:
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags:  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
           build-args: |
+            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             ${{ inputs.BUILD_ARGUMENTS }}
       - id: output-image
         run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
