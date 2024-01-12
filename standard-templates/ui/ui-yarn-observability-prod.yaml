@@ -49,6 +49,8 @@ jobs:
       CLUSTER_NAME: ${{ vars.RLOG_API_STAGE_CLUSTER_NAME }}
       HELM_VALUES_PATH: ./helm-values/stage-values.yaml
       SHA: '${{ needs.build.outputs.SHA }}'
+      BUILD_ARGUMENTS: |
+        NPM_TOKEN=${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }}
       UNZIP_COMMAND: |
         tar -xf rlog-api.zip
         tar -xf node_modules.zip
