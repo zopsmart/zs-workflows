@@ -42,7 +42,6 @@ jobs:
 
   stage_deployment:
     needs: [ test ]
-    if: (github.ref == 'refs/heads/main') && (github.event_name == 'push')
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +78,6 @@ jobs:
 
   containerize_and_push_prod:
     name: Server-Prod
-    if: ${{ startsWith(github.ref, 'refs/tags/v')}}
     strategy:
       fail-fast: false
       matrix:
