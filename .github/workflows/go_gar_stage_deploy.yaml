@@ -78,6 +78,7 @@ on:
 
 jobs:
   build:
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -149,6 +150,7 @@ jobs:
 
   stage_deployment:
       runs-on: ubuntu-latest
+      if: (github.ref == 'refs/heads/development') && (github.event_name == 'push')
       needs: dockerize
       container:
         image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
