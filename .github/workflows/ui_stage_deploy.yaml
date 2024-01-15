@@ -56,6 +56,7 @@ on:
 jobs:
   dockerize_stage:
     runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
     outputs:
       image: ${{ steps.output-image.outputs.image }}
     name: 🐳 Dockerize Stage    
@@ -99,6 +100,7 @@ jobs:
   stage_deployment:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to Stage
+    if: (github.ref == 'refs/heads/development')
     needs: dockerize_stage
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
