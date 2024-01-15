@@ -40,6 +40,7 @@ on:
 jobs:
   check-tag:
     runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/v')}}
     outputs:
       tag_exists: ${{ steps.tag-check.outputs.tag_exists }}
 
@@ -114,8 +115,12 @@ jobs:
       - name: Extract Release Tag
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
-      - name: Setup Helm Chart
-        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+      - name: Add Helm Repo
+        run: |
+          helm repo add helm \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.PAT }}" \
+            "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
 
       - name: Setup Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
@@ -131,4 +136,4 @@ jobs:
         run: kubectl set env deployment/${{ inputs.APP_NAME }} APP_VERSION=${{ env.RELEASE_VERSION }} -n ${{ inputs.NAMESPACE }}
 
       - name: Update Deployment Image
-        run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} ./helm/service/ -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }}
+        run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.0

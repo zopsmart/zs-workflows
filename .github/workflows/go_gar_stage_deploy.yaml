@@ -78,6 +78,7 @@ on:
 
 jobs:
   build:
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -149,6 +150,7 @@ jobs:
 
   stage_deployment:
       runs-on: ubuntu-latest
+      if: (github.ref == 'refs/heads/development') && (github.event_name == 'push')
       needs: dockerize
       container:
         image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
@@ -164,6 +166,13 @@ jobs:
         - name: Setup Helm Chart
           run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
 
+        - name: Add Helm Repo
+          run: |
+            helm repo add helm \
+              --username "${{ github.actor }}" \
+              --password "${{ secrets.PAT }}" \
+              "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
+
         - name: Setup Cloud SDK
           uses: google-github-actions/setup-gcloud@v0
           with:
@@ -175,4 +184,4 @@ jobs:
           run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
         - name: Update Deployment Image
-          run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} ./helm/service/ -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }}
+          run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.0
