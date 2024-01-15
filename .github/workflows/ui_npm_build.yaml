@@ -78,6 +78,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: 🧪 Test and 🔨 Build
+    if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || github.ref == 'refs/heads/master')
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     steps:
