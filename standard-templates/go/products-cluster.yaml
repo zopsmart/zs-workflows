@@ -8,6 +8,8 @@ on:
       - '*'
     branches:
       - main
+      - master
+      - development
 env:
 
   APP_NAME: app-name

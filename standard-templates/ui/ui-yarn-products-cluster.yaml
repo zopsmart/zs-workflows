@@ -8,6 +8,8 @@ name: Build and Deploy
       - '*'
     branches:
       - main
+      - master
+      - development
 jobs:
   build:
     uses: zopsmart/zs-workflows/.github/workflows/ui_yarn_build.yaml@main

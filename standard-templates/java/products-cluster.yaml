@@ -5,11 +5,15 @@ on:
     types: [review_requested]
     branches:
       - main
+      - master
+      - development
   push:
     tags:
       - '*'
     branches:
       - main
+      - master
+      - development
 
 jobs:
   build:
