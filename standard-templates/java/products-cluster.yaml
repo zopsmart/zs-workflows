@@ -22,6 +22,16 @@ jobs:
       GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
       GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
 
+  update_configmap:
+    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
+    with:
+      APP_NAME: "app-name"
+      ENV_FILE_NAME: "path of env file"
+      CLUSTER_PROJECT: "cluster-project"
+      CLUSTER_NAME: "cluster-name"
+      NAMESPACE: "namespace"
+    secrets:
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 
   stage_deployment:
     needs: [ build ]

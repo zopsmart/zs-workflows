@@ -34,6 +34,18 @@ jobs:
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
       SSH_KEY: '${{ secrets.ZOPSMART_SSH_KEY }}' #not a mandatory field. Required to install web ssh agent
+
+  update_configmap:
+    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
+    with:
+      APP_NAME: "app-name"
+      ENV_FILE_NAME: "path of env file"
+      CLUSTER_PROJECT: "cluster-project"
+      CLUSTER_NAME: "cluster-name"
+      NAMESPACE: "namespace"
+    secrets:
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+
   stage_deployment:
     needs:
       - build
