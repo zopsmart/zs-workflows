@@ -10,8 +10,8 @@ on:
         description: 'namespace name'
         required: true
         type: string
-      ENV_FILE_NAME:
-        description: 'env file name'
+      ENV_FILE_PATH:
+        description: 'env file path'
         required: true
         type: string
       CLUSTER_PROJECT:
@@ -75,7 +75,7 @@ jobs:
         id: read-env
         run: |
           CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
-          ENV_FILE_PATH=${{ inputs.ENV_FILE_NAME }}
+          ENV_FILE_PATH=${{ inputs.ENV_FILE_PATH }}
           
           # Create an associative array to store key-value pairs
           declare -A envArray
