@@ -165,38 +165,16 @@ jobs:
             ${{ inputs.BUILD_ARGUMENTS }}
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
-
-    Update_Config-Map:
-      - name: Checkout code
-        outputs:
-          run_job: ${{ steps.check_files.outputs.run_job }}
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-
-      - name: check modified files
-        id: check_files
-        run: |
-          echo "=============== list modified files ==============="
-          git diff --name-only HEAD^ HEAD
           
-          echo "========== check paths of modified files =========="
-          git diff --name-only HEAD^ HEAD &gt; files.txt
-          while IFS= read -r file
-          do
-            echo $file
-            if [[ $file != configs/.stage.env ]]; then
-              echo "This modified file is not under the 'db' folder."
-              echo "::set-output name=run_job::false"
-              break
-            else
-              echo "::set-output name=run_job::true"
-            fi
-          done &lt; files.txt
-
-        
-          
-
+  update_cofig_map:
+    needs: dockerize
+    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@main
+    with:
+      APP_NAME: ${{ inputs.APP_NAME }}
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+      ENV_FILE_NAME: "configs/.stage.env"
+    secrets:
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
   stage_deployment:
       runs-on: ubuntu-latest
       needs: dockerize
