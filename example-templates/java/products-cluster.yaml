@@ -22,7 +22,6 @@ jobs:
       GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
       GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
 
-
   stage_deployment:
     needs: [ build ]
     strategy:

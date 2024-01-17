@@ -29,6 +29,7 @@ jobs:
       ENABLE_TESTS: 'to create coverage badge, default is true'
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
+
   stage_deployment:
     needs:
       - build

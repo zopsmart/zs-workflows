@@ -34,6 +34,7 @@ jobs:
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
       SSH_KEY: '${{ secrets.ZOPSMART_SSH_KEY }}' #not a mandatory field. Required to install web ssh agent
+
   stage_deployment:
     needs:
       - build
