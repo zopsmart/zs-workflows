@@ -104,6 +104,7 @@ jobs:
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   update_configmap:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development')
     uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
     with:
       APP_NAME: ${{ inputs.APP_NAME }}
