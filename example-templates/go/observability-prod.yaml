@@ -75,6 +75,7 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml
+      ENV_FILE_PATH: ./configs/.stage.env
       SHA: ${{ needs.test.outputs.SHA }}
     secrets:
       PAT: ${{ secrets.STAGE_PAT }}  
@@ -98,6 +99,7 @@ jobs:
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
+      ENV_FILE_PATH: ./configs/.prod.env
     secrets:
       PAT: ${{ secrets.PROD_PAT }}
       GAR_KEY: ${{ secrets.PROD_DEPLOY_KEY }}

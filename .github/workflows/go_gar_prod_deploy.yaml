@@ -26,6 +26,11 @@ on:
       HELM_VALUES_PATH:
         type: string
         required: true
+      ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.prod.env"
 
     secrets:
       PAT:
@@ -103,7 +108,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
     with:
       APP_NAME: ${{ inputs.APP_NAME }}
-      ENV_FILE_PATH: ./configs/.prod.env
+      ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
       CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }
       NAMESPACE: ${{ inputs.NAMESPACE }}

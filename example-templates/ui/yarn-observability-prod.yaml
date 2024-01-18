@@ -50,6 +50,7 @@ jobs:
       HELM_VALUES_PATH: ./helm-values/stage-values.yaml
       SHA: '${{ needs.build.outputs.SHA }}'
       CREATE_NPMRC: 'whether to create .npmrc file to get dependencies, default value is true'
+      ENV_FILE_PATH: ./configs/.stage.env
       UNZIP_COMMAND: |
         tar -xf rlog-api.zip
         tar -xf node_modules.zip
@@ -74,6 +75,7 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       NAMESPACE: '${{ matrix.namespace }}'
       HELM_VALUES_PATH: ./helm-values/prod-values.yaml
+      ENV_FILE_PATH: ./configs/.prod.env
     secrets:
       PAT: ${{ secrets.PROD_PAT }}
       GAR_KEY: ${{ secrets.PROD_DEPLOY_KEY }}

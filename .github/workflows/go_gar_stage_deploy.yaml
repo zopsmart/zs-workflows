@@ -66,6 +66,12 @@ on:
         required: false
         type: string
 
+      ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
+
     secrets:
       PAT:
         description: 'required input'
@@ -153,7 +159,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
     with:
       APP_NAME: ${{ inputs.APP_NAME }}
-      ENV_FILE_PATH: ./configs/.stage.env
+      ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
       CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }
       NAMESPACE: ${{ inputs.NAMESPACE }}
