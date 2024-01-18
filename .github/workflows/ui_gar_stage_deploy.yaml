@@ -142,6 +142,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Helm Chart
+        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+
       - name: Add Helm Repo
         run: |
           helm repo add helm \
