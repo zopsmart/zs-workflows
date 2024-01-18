@@ -86,6 +86,7 @@ jobs:
       GCR_PROJECT: zs-products # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
+      ENV_FILE_PATH: ./configs/.stage.env
       SHA: ${{ needs.test.outputs.SHA }}
       TYPE: ${{ matrix.type }}
 
@@ -115,7 +116,7 @@ jobs:
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_PROJECT: zs-products
       TYPE: ${{ matrix.type }}
-
+      ENV_FILE_PATH: ./configs/.prod.env
     secrets:
       GCR_KEY: ${{ secrets.GCR_JSON_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
