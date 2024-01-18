@@ -150,12 +150,12 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Generating build
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push')
         run: |
           ${{ inputs.BUILD_COMMAND }}
 
       - uses: actions/upload-artifact@v3
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push')
         name: upload zipped build and node modules
         with:
           name: ${{ inputs.APP_NAME }}
