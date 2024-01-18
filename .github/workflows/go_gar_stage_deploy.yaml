@@ -162,7 +162,7 @@ jobs:
       APP_NAME: ${{ inputs.APP_NAME }}
       ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
       CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
-      CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }
+      CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }}
       NAMESPACE: ${{ inputs.NAMESPACE }}
     secrets:
       DEPLOY_KEY: ${{ secrets.GAR_KEY }}
