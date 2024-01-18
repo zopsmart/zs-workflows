@@ -120,6 +120,7 @@ jobs:
           path: ${{ inputs.DOCKER_FILE_PATH }}/${{ inputs.ARTIFACT_PATH }}
 
   dockerize:
+    name: 🐳 Dockerize Stage
     runs-on: ubuntu-latest
     needs: [ build ]
     outputs:
@@ -184,19 +185,18 @@ jobs:
         - name: Setup Helm Chart
           run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
 
+        - name: Authorize to GCP service account
+          uses: google-github-actions/auth@v1
+           with:
+            credentials_json: ${{ secrets.GAR_KEY }}
+            
         - name: Add Helm Repo
           run: |
             helm repo add helm \
               --username "${{ github.actor }}" \
               --password "${{ secrets.PAT }}" \
-              "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
-
-        - name: Setup Cloud SDK
-          uses: google-github-actions/setup-gcloud@v0
-          with:
-            project_id: ${{ inputs.CLUSTER_PROJECT }}
-            service_account_key: ${{ secrets.GAR_KEY }}
-            export_default_credentials: true
+              "https://raw.githubusercontent.com/zopsmart/helm/main/charts
+        
 
         - name: Set GCloud Project and Fetch Cluster Credentials
           run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
