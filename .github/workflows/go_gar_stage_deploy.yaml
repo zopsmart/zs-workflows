@@ -195,7 +195,7 @@ jobs:
             helm repo add helm \
               --username "${{ github.actor }}" \
               --password "${{ secrets.PAT }}" \
-              "https://raw.githubusercontent.com/zopsmart/helm/main/charts
+              "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
         
 
         - name: Set GCloud Project and Fetch Cluster Credentials
