@@ -8,9 +8,10 @@ name: Build and Deploy
       - '*'
     branches:
       - main
+      - master
+      - development
 jobs:
   build:
-    if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     uses: zopsmart/zs-workflows/.github/workflows/ui_yarn_build.yaml@main
     with:
       APP_NAME: smart-quiz-admin-ui
@@ -28,10 +29,10 @@ jobs:
       ENABLE_TESTS: 'to create coverage badge, default is true'
     secrets:
       PAT: '${{ secrets.GITHUB_TOKEN }}'
+
   stage_deployment:
     needs:
       - build
-    if: (github.ref == 'refs/heads/main')
     strategy:
       fail-fast: false
       matrix:
@@ -43,6 +44,9 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@main
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
+      BUILD_ARGUMENTS: |
+        VERSION=edge
+        APP_NAME=main
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
       IMAGE_REGISTRY: gcr.io
@@ -52,6 +56,7 @@ jobs:
       CLUSTER_PROJECT: zs-products
       SHA: '${{ needs.build.outputs.SHA }}'
       TYPE: '${{ matrix.type }}'
+      ENV_FILE_PATH: ./configs/.stage.env
       UNZIP_COMMAND: |
         tar -xf smart-quiz-admin-ui.zip
         tar -xf node_modules.zip
@@ -59,7 +64,6 @@ jobs:
       GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
       DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'
   prod_deployment:
-    if: "startsWith(github.ref, 'refs/tags/v')"
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +82,7 @@ jobs:
       NAMESPACE: '${{ matrix.namespace }}'
       CLUSTER_PROJECT: zs-products
       TYPE: '${{ matrix.type }}'
+      ENV_FILE_PATH: ./configs/.prod.env
     secrets:
       GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
       DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'

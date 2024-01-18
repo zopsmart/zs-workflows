@@ -76,7 +76,15 @@ on:
         description: "deployment or cron"
         required: false
         default: deployment
-
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
+      ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
 
     secrets:
       PAT:
@@ -94,6 +102,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
@@ -151,7 +160,6 @@ jobs:
           username: ${{ inputs.username }}
           password: ${{ secrets.GCR_KEY }}
 
-
       - name: Build and Push Docker Image to GCR
         uses: docker/build-push-action@v2
         with:
@@ -159,41 +167,57 @@ jobs:
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
+          
+  update_configmap:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development')
+    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
+    with:
+      APP_NAME: ${{ inputs.APP_NAME }}
+      ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
+      CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
+      CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+    secrets:
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 
   stage_deployment:
-      runs-on: ubuntu-latest
-      needs: dockerize
-      container:
-        image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
-        options: --rm
-      name: 🚀 Deploy Stage
-      env:
-        image: ${{needs.dockerize.outputs.image}}
+    runs-on: ubuntu-latest
+    needs: dockerize
+    if: (github.ref == 'refs/heads/development') && (github.event_name == 'push')
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
+      options: --rm
+    name: 🚀 Deploy Stage
+    env:
+      image: ${{needs.dockerize.outputs.image}}
 
-      steps:
-        - name: Checkout Code
-          uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-        - name: Verify
-          run: ls -la
+      - name: Verify
+        run: ls -la
+
+      - name: Directory
+        run: pwd
+
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.DEPLOY_KEY }}
           
-        - name: Directory
-          run: pwd
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
-        - name: Authorize to GCP service account
-          uses: google-github-actions/auth@v1
-          with:
-            credentials_json: ${{ secrets.DEPLOY_KEY }}
+      - name: Update Deployment Image
+        if: ${{ inputs.TYPE == 'deployment' }}
+        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
 
-        - name: Set GCloud Project and Fetch Cluster Credentials
-          run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+      - name: Update Cron Image
+        if: ${{ inputs.TYPE == 'cron' }}
+        run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
 
-        - name: Update Deployment Image
-          if: ${{ inputs.TYPE == 'deployment' }}
-          run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
-
-        - name: Update Cron Image
-          if: ${{ inputs.TYPE == 'cron' }}
-          run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}

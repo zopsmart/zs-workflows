@@ -50,6 +50,15 @@ on:
         description: "name of the built artifacts"
         required: true
         type: string
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
+      ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
     secrets:
       GCR_KEY:
         description: 'required input'
@@ -57,14 +66,15 @@ on:
 
       DEPLOY_KEY:
         description: 'required input'
-        required: true
+        required: true 
 
 jobs:
   dockerize_stage:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.output-image.outputs.image }}
-    name: 🐳 Dockerize Stage
+    name: 🐳 Dockerize - Stage
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development')
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -92,13 +102,28 @@ jobs:
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}
           tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
-   
+
+  update_configmap:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development')
+    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
+    with:
+      APP_NAME: ${{ inputs.APP_NAME }}
+      ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
+      CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
+      CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+    secrets:
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+
   stage_deployment:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to Stage
+    if: (github.ref == 'refs/heads/development') && (github.event_name == 'push')
     needs: dockerize_stage
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.3

@@ -5,6 +5,9 @@ on:
       PAT:
         description: 'github token'
         required: true
+      SSH_KEY:
+        description: 'ssh key'
+        required: false
     inputs:
       APP_NAME:
         description: 'name of ui service'
@@ -20,7 +23,7 @@ on:
         type: string
       TEST_COMMAND:
         description: 'command to run test files'
-        required: true
+        required: false
         type: string
       ARTIFACT_PATH:
         description: "path used for build"
@@ -47,6 +50,20 @@ on:
         required: false
         type: string
         default: ""
+      SSH_AGENT:
+        description: 'enable ssh agent'
+        required: false
+        type: boolean
+        default: false
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: boolean
+        default: false
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
 
 
     outputs:
@@ -61,6 +78,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: 🧪 Test and 🔨 Build
+    if: (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || github.ref == 'refs/heads/master')
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     steps:
@@ -68,6 +86,16 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.NODE_VERSION }}
+
+      - uses: webfactory/ssh-agent@v0.4.1
+        if: ${{ inputs.SSH_AGENT }}
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: installing dependencies and zipping node modules
         run: |
