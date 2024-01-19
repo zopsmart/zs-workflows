@@ -51,6 +51,7 @@ jobs:
       TYPE: ${{ matrix.type }}
       ARTIFACT_PATH: build/libs
       ARTIFACT_NAME: artifacts
+      ENV_FILE_PATH: ./configs/.stage.env
     secrets:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
@@ -79,6 +80,7 @@ jobs:
       TYPE: ${{ matrix.type }}
       ARTIFACT_PATH: build/libs
       ARTIFACT_NAME: artifacts
+      ENV_FILE_PATH: ./configs/.prod.env
     secrets:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
