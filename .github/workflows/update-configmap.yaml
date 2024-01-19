@@ -79,11 +79,21 @@ jobs:
           declare -A envArray
           
           # Read each line in .env and extract key-value pairs
-          while IFS= read -r line; do
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if [ -z "$line" ] || [ "${line:0:1}" == "#" ]; then
+              continue
+            fi
             key=$(echo "$line" | cut -d '=' -f 1)
             value=$(echo "$line" | cut -d '=' -f 2-)
             envArray["$key"]=$value
           done < "$ENV_FILE_PATH"
+          
+          # Handle the case when the last line doesn't end with a newline character
+          if [[ -n "$line" ]]; then
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          fi
           
           # Read the .env file and create a ConfigMap YAML dynamically
           echo "apiVersion: v1" > $CONFIG_MAP_NAME.yaml
