@@ -77,7 +77,7 @@ jobs:
 
   dockerize:
     runs-on: ubuntu-latest
-    name: 🐳 Dockerize Prod
+    name: 🐳 Dockerize
     needs: check-tag
     if: ${{ needs.check-tag.outputs.tag_exists == 'true' }}
 

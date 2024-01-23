@@ -68,7 +68,7 @@ on:
 
 jobs:
   dockerize:
-    name: 🐳 Dockerize Stage
+    name: 🐳 Dockerize
     runs-on: ubuntu-latest
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
     outputs:
