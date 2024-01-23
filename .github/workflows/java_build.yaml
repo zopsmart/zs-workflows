@@ -1,6 +1,11 @@
 name: "checkout and build"
 on:
   workflow_call:
+    inputs:
+      APP_NAME:
+        type: string
+        required: false
+
     secrets:
       GH_USERNAME:
         description: 'required input'
@@ -23,7 +28,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
       - name: Build with Gradle
-        run: ./gradlew clean build
+        run: ./gradlew clean :${{ inputs.APP_NAME }}:build
         env:
           GH_USERNAME: ${{ secrets.GH_USERNAME }}
           GH_PASSWORD: ${{ secrets.GH_PASSWORD }}
@@ -31,4 +36,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: artifacts
-          path: build/libs
+          path: ${{ inputs.APP_NAME }}/build/libs
