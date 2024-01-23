@@ -106,4 +106,3 @@ jobs:
           if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'cron' }}
           run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ inputs.IMAGE }} --namespace ${{ inputs.NAMESPACE }}
 
-
