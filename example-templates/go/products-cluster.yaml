@@ -66,7 +66,7 @@ jobs:
             DOCKER_FILE_PATH: "./script/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "script-name"
             namespace: "namespace-name"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_stage_deploy_products_cluster.yaml@main
 
     with:
       EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"

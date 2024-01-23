@@ -43,9 +43,10 @@ jobs:
     secrets:
       PAT: ${{ secrets.PAT }} // not a mandatory field
 
-
-  stage_deployment:
+  build_dockerize:
     needs: [ test ]
+    name: Build & dockerize
+    uses: zopsmart/zs-workflows/.github/workflows/build_and_dockerize.yaml@main
     strategy:
       fail-fast: false
       matrix:
@@ -54,8 +55,6 @@ jobs:
             artifact_path: "based on build command"
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: ${{ vars.STAGE_APP_NAME }}
-            namespace: ${{ vars.STAGE_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/go_gar_stage_deploy.yaml@main
     with:
       EXTRA_DEPENDENCIES: "true or false, to add schema to db"
       DEPENDENCIES_COMMAND: |
@@ -68,27 +67,50 @@ jobs:
         VERSION=edge
         APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
-      NAMESPACE: ${{ matrix.namespace }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
+      SHA: ${{ needs.test.outputs.SHA }}
+    secrets:
+      PAT: ${{ secrets.STAGE_PAT }}
+      GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
+
+  stage_deployment:
+    needs: [ build_dockerize ]
+    name: Stage deploy
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          app_name: ${{ vars.STAGE_APP_NAME }}
+          namespace: ${{ vars.STAGE_NAMESPACE }}
+          type: "deployment or cron"
+
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_stage_deploy.yaml@main
+    with:
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml
+      IMAGE: ${{ needs.build_dockerize.outputs.IMAGE }}
+      DEPLOYMENT_TOOL: "kubectl or helm"
+      TYPE: ${{ matrix.type }}
       ENV_FILE_PATH: ./configs/.stage.env
-      SHA: ${{ needs.test.outputs.SHA }}
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }}  
+      PAT: ${{ secrets.STAGE_PAT }}
       GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
 
-  containerize_and_push_prod:
-    name: Server-Prod
+  prod_deployment:
+    name: Prod deploy
     strategy:
       fail-fast: false
       matrix:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
+            type: "deployment or cron"
+
     uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
@@ -99,6 +121,8 @@ jobs:
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
+      DEPLOYMENT_TOOL: "kubectl or helm"
+      TYPE: ${{ matrix.type }}
       ENV_FILE_PATH: ./configs/.prod.env
     secrets:
       PAT: ${{ secrets.PROD_PAT }}
