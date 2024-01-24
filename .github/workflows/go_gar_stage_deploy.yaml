@@ -78,10 +78,6 @@ jobs:
           uses: google-github-actions/auth@v1
           with:
             credentials_json: ${{ secrets.GAR_KEY }}
-
-        - name: Setup Helm Chart
-          if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
-          run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
             
         - name: Add Helm Repo
           if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}

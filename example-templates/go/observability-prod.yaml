@@ -102,6 +102,7 @@ jobs:
       GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
 
   prod_deployment:
+    needs: [ build_dockerize ]
     name: Prod deploy
     strategy:
       fail-fast: false

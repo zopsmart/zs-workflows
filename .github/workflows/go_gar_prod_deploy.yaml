@@ -143,10 +143,6 @@ jobs:
       - name: Extract Release Tag
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
-      - name: Setup Helm Chart
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
-        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
-
       - name: Add Helm Repo
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
         run: |
