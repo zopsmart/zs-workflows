@@ -114,7 +114,7 @@ jobs:
           done
         shell: bash
 
-      - name: Configmap for React services
+      - name: Configs for React services
         if: ${{ inputs.REACT_APP }}
         run: |
           CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
