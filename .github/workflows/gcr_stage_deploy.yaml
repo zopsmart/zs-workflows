@@ -59,6 +59,11 @@ on:
         required: false
         type: string
         default: "./configs/.stage.env"
+      REACT_APP:
+        description: 'for react service'
+        type: boolean
+        required: false
+        default: false
     secrets:
       GCR_KEY:
         description: 'required input'
@@ -117,6 +122,7 @@ jobs:
       CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }}
       NAMESPACE: ${{ inputs.NAMESPACE }}
+      REACT_APP: ${{ inputs.REACT_APP }}
     secrets:
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 

@@ -57,6 +57,7 @@ jobs:
       SHA: '${{ needs.build.outputs.SHA }}'
       TYPE: '${{ matrix.type }}'
       ENV_FILE_PATH: ./configs/.stage.env
+      REACT_APP: true
       UNZIP_COMMAND: |
         tar -xf smart-quiz-admin-ui.zip
         tar -xf node_modules.zip
@@ -83,6 +84,7 @@ jobs:
       CLUSTER_PROJECT: zs-products
       TYPE: '${{ matrix.type }}'
       ENV_FILE_PATH: ./configs/.prod.env
+      REACT_APP: true
     secrets:
       GCR_KEY: '${{ secrets.GCR_JSON_KEY }}'
       DEPLOY_KEY: '${{ secrets.DEPLOY_KEY }}'
