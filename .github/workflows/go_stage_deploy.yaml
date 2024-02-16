@@ -1,0 +1,98 @@
+name: "Test, Build, Dockerise and Update-configmap"
+on:
+  workflow_call:
+    inputs:
+      APP_NAME:
+        description: 'name of postman collection file'
+        required: true
+        type: string
+      TYPE:
+        type: string
+        description: "deployment or cron"
+        required: true
+      DEPLOYMENT_TOOL:
+        type: string
+        description: "kubectl or helm"
+        required: true
+      IMAGE_REGISTRY:
+        type: string
+        required: true
+      GAR_PROJECT:
+        type: string
+        required: true
+      GAR_REGISTRY:
+        type: string
+        required: true
+      CLUSTER_PROJECT:
+        type: string
+        required: true
+      CLUSTER_NAME:
+        type: string
+        required: true
+      NAMESPACE:
+        type: string
+        required: true
+      HELM_VALUES_PATH:
+        type: string
+        required: false
+      IMAGE:
+        type: string
+        required: true
+
+    secrets:
+      PAT:
+        description: 'required input'
+        required: true
+      GAR_KEY:
+        description: 'required input'
+        required: true
+      IMAGE_PAT:
+        required: false
+jobs:
+  stage_deployment:
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/development')
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      options: --rm
+    name: 🚀 Deploy
+    env:
+      image: ${{ needs.dockerize.outputs.image }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Helm Chart
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
+        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_KEY }}
+
+      - name: Add Helm Repo
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
+        run: |
+          helm repo add helm \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.PAT }}" \
+            "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Update Deployment Image using Helm
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' }}
+        run: helm upgrade --install --set image=${{ inputs.IMAGE }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.8
+
+      - name: Update Deployment Image using Kubectl
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' }}
+        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ inputs.IMAGE }} --namespace ${{ inputs.NAMESPACE }}
+
+      - name: Update Cron Image
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'cron' }}
+        run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ inputs.IMAGE }} --namespace ${{ inputs.NAMESPACE }}
+
+
+

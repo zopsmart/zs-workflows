@@ -17,11 +17,20 @@ on:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/go.yaml@main
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app_name: ${{ vars.STAGE_APP_NAME }}
+            stage_namespace: ${{ vars.STAGE_NAMESPACE }}
+            prod_namespace: ${{ vars.PROD_NAMESPACE }}
+            build_commands: "<build command>"
+            DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
     with:
       POSTMAN_ENABLED: false
       TESTCOVERAGE_THRESHOLD: 10
-      APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
+      APP_NAME: ${{ matrix.app_name }} #postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json
       ADD_SCHEMA: "true or false, if true must provide schema command"
       SCHEMA_COMMAND: "command to load schema to database,
                       mysql - host = 127.0.0.1, user = root , password = password, database test
@@ -40,8 +49,23 @@ jobs:
       MSSQL_ENABLE: "to enable MSSQL service"
       DYNAMODB_ENABLE: "to enable DYNAMODB service"
       CASSANDRA_ENABLE: "to enable CASSANDRA service"
+      BUILD_COMMAND: ${{ matrix.build_commands }}
+      BUILD_ARGUMENTS: |
+        VERSION=edge
+        APP_NAME=main
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
+      GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
+      CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
+      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
+      STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
+      PROD_NAMESPACE: ${{ matrix.prod_namespace }}
+      STAGE_ENV_FILE_PATH: ./configs/.stage.env
+      PROD_ENV_FILE_PATH: ./configs/.prod.env
+      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
     secrets:
       PAT: ${{ secrets.PAT }} // not a mandatory field
+      GAR_KEY: ${{ secrets.GAR_KEY }}
 
 
   stage_deployment:
@@ -50,23 +74,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - build_commands: "<build command>"
-            artifact_path: "based on build command"
-            DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
-            app_name: ${{ vars.STAGE_APP_NAME }}
+          - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/go_gar_stage_deploy.yaml@main
+            type: "deployment"
+            deployment_tool: "helm"
+    uses: zopsmart/zs-workflows/.github/workflows/go_stage_deploy.yaml@main
     with:
-      EXTRA_DEPENDENCIES: "true or false, to add schema to db"
-      DEPENDENCIES_COMMAND: |
-        "commands to install dependencies"
-        ""
-      BUILD_COMMAND: ${{ matrix.build_commands }}
-      ARTIFACT_PATH: ${{ matrix.artifact_path }}
-      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
-      BUILD_ARGUMENTS: |
-        VERSION=edge
-        APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
@@ -75,11 +88,12 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml
-      ENV_FILE_PATH: ./configs/.stage.env
-      SHA: ${{ needs.test.outputs.SHA }}
+      IMAGE: ${{ needs.test.outputs.image }}
+      TYPE: ${{ matrix.type }}
+      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }}  
-      GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
+      PAT: ${{ secrets.STAGE_PAT }}
+      GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
 
   containerize_and_push_prod:
     name: Server-Prod
@@ -89,7 +103,9 @@ jobs:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@main
+            type: "deployment"
+            deployment_tool: "helm"
+    uses: zopsmart/zs-workflows/.github/workflows/go_prod_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
@@ -99,8 +115,9 @@ jobs:
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
-      ENV_FILE_PATH: ./configs/.prod.env
+      IMAGE: ${{ needs.test.outputs.image }}
+      TYPE: ${{ matrix.type }}
+      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
       PAT: ${{ secrets.PROD_PAT }}
-      GAR_KEY: ${{ secrets.PROD_DEPLOY_KEY }}
-
+      GAR_KEY: ${{ secrets.PROD_GAR_KEY }}
