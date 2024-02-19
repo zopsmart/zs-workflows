@@ -46,8 +46,6 @@ on:
       GAR_KEY:
         description: 'required input'
         required: true
-      IMAGE_PAT:
-        required: false
 jobs:
   stage_deployment:
     runs-on: ubuntu-latest

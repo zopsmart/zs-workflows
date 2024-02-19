@@ -1,0 +1,114 @@
+name: "Test, Build, Dockerise and Update-configmap"
+on:
+  workflow_call:
+    inputs:
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
+      CLUSTER_PROJECT:
+        type: string
+        required: true
+      CLUSTER_NAME:
+        type: string
+        required: true
+      DOCKER_FILE_PATH:
+        description: 'path of docker file'
+        required: true
+        type: string
+      GAR_PROJECT:
+        type: string
+        required: true
+      GAR_REGISTRY:
+        type: string
+        required: true
+      IMAGE_REGISTRY:
+        type: string
+        required: true
+      PROD_ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
+      PROD_NAMESPACE:
+        type: string
+        required: true
+      STAGE_ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
+      STAGE_NAMESPACE:
+        type: string
+        required: true
+      REACT_APP:
+        description: 'for react service'
+        type: boolean
+        required: false
+        default: false
+
+    secrets:
+      GAR_KEY:
+        description: 'required input'
+        required: true
+      GH_USERNAME:
+        description: 'required input'
+        required: true
+      GH_PASSWORD:
+        description: 'required input'
+        required: true
+
+jobs:
+  update_configmap:
+    if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && !startsWith(github.ref, 'refs/tags/v') }}
+    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
+    with:
+      APP_NAME: ${{ inputs.APP_NAME }}
+      STAGE_ENV_FILE_PATH: ${{ inputs.STAGE_ENV_FILE_PATH }}
+      PROD_ENV_FILE_PATH: ${{ inputs.PROD_ENV_FILE_PATH }}
+      CLUSTER_PROJECT: ${{ inputs.CLUSTER_PROJECT }}
+      CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }}
+      STAGE_NAMESPACE: ${{ inputs.STAGE_NAMESPACE }}
+      PROD_NAMESPACE: ${{ inputs.PROD_NAMESPACE }}
+      REACT_APP: ${{ inputs.REACT_APP }}
+    secrets:
+      GAR_KEY: ${{ secrets.GAR_KEY }}
+
+  test:
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') || github.event_name == 'pull_request'
+    steps:
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11.0.10
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Build with Gradle
+        run: ./gradlew clean build
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_PASSWORD: ${{ secrets.GH_PASSWORD }}
+
+      - name: Login to GAR
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.IMAGE_REGISTRY }}
+          username: _json_key
+          password: ${{ secrets.GAR_KEY }}
+
+      - name: Push Docker Image to GAR
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ${{ inputs.DOCKER_FILE_PATH }}
+          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
+
+      - id: output-image
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
+        run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"

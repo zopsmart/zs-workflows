@@ -1,8 +1,9 @@
-name: Go - Lint, Test & Build
+name: Build and Deploy
 
 on:
   pull_request:
-    types: [review_requested]
+    types:
+      - review_requested
     branches:
       - main
       - master
@@ -16,8 +17,8 @@ on:
       - development
 
 jobs:
-  test:
-    uses: zopsmart/zs-workflows/.github/workflows/go.yaml@main
+  build:
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm.yaml@main
     strategy:
       fail-fast: false
       matrix:
@@ -28,31 +29,16 @@ jobs:
             build_commands: "<build command>"
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
     with:
-      POSTMAN_ENABLED: false
-      TESTCOVERAGE_THRESHOLD: 10
-      APP_NAME: ${{ matrix.app_name }} #postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json
-      ADD_SCHEMA: "true or false, if true must provide schema command"
-      SCHEMA_COMMAND: "command to load schema to database,
-                      mysql - host = 127.0.0.1, user = root , password = password, database test
-                      postgres - host = 127.0.0.1, user = postgres, password = password, database test"
-      EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
-      DEPENDENCIES_COMMAND: |
-        "commands to install dependencies"
-        ""
-      MYSQL_ENABLE: "to enable MYSQL service"
-      POSTGRES_ENABLE: "to enable POSTGRES service"
-      REDIS_ENABLE: "to enable REDIS service"
-      ZIPKIN_ENABLE: "to enable ZIPKIN service"
-      ELASTIC_SEARCH_ENABLE: "to enable ELASTIC_SEARCH service"
-      KAFKA_ENABLE: "to enable KAFKA service"
-      MONGO_ENABLE: "to enable MONGO service"
-      MSSQL_ENABLE: "to enable MSSQL service"
-      DYNAMODB_ENABLE: "to enable DYNAMODB service"
-      CASSANDRA_ENABLE: "to enable CASSANDRA service"
-      BUILD_COMMAND: ${{ matrix.build_commands }}
-      BUILD_ARGUMENTS: |
-        VERSION=edge
-        APP_NAME=main
+      APP_NAME: ${{ matrix.app_name }}
+      NODE_VERSION: '18.x'
+      BUILD_COMMAND: |
+        commands to build
+      TEST_COMMAND: |
+        CI=false npm run test:coverage
+      LINTER_CHECKS: true
+      PRETTIER_CHECKS: true
+      ENABLE_TESTS: false
+      DEPENDENCIES_FLAG: --legacy-peer-deps //not required
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
@@ -65,12 +51,11 @@ jobs:
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
     secrets:
-      PAT: ${{ secrets.PAT }} // not a mandatory field
-      GAR_KEY: ${{ secrets.GAR_KEY }}
-
-
+      PAT: '${{ secrets.PAT }}'
+      NPM_TOKEN: '${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }}' //not required
   stage_deployment:
-    needs: [ test ]
+    needs:
+      - build
     strategy:
       fail-fast: false
       matrix:
@@ -79,6 +64,7 @@ jobs:
             namespace: ${{ vars.STAGE_NAMESPACE }}
             type: "deployment"
             deployment_tool: "helm"
+
     uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
@@ -86,18 +72,16 @@ jobs:
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
-      CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
-      HELM_VALUES_PATH: ./helm-values/stage.yaml
-      IMAGE: ${{ needs.test.outputs.image }}
+      CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
+      HELM_VALUES_PATH: './helm-values/stage.yaml'
+      IMAGE: ${{ needs.build.outputs.image }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }}
-      GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
-
-  containerize_and_push_prod:
-    name: Server-Prod
+      GAR_KEY: '${{ secrets.STAGE_DEPLOY_KEY }}'
+      PAT: '${{ secrets.STAGE_PAT }}'
+  prod_deployment:
     strategy:
       fail-fast: false
       matrix:
@@ -109,16 +93,16 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
-      CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
-      NAMESPACE: ${{ matrix.namespace }}
+      CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
       IMAGE: ${{ needs.test.outputs.image }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
-      PAT: ${{ secrets.PROD_PAT }}
-      GAR_KEY: ${{ secrets.PROD_GAR_KEY }}
+      GAR_KEY: '${{ secrets.STAGE_DEPLOY_KEY }}'
+      PAT: '${{ secrets.PROD_PAT }}'
