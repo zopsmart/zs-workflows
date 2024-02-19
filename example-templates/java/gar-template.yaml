@@ -54,7 +54,7 @@ jobs:
           - app_name: "training-api"
             namespace: "training-stage"
             type: "deployment"
-            deployment_tool: "helm"
+            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
     uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
@@ -80,7 +80,7 @@ jobs:
           - app_name: "training-api"
             namespace: "training"
             type: "deployment"
-            deployment_tool: "helm"
+            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
     uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
