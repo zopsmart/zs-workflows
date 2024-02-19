@@ -357,7 +357,7 @@ jobs:
         with:
           push: true
           context: .
-          file: ${{ inputs.DOCKER_FILE_PATH }}
+          file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}
           build-args: |
             ${{ inputs.BUILD_ARGUMENTS }}
