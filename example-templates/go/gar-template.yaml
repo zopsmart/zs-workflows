@@ -16,7 +16,7 @@ on:
       - development
 
 jobs:
-  test:
+  build:
     uses: zopsmart/zs-workflows/.github/workflows/go.yaml@main
     strategy:
       fail-fast: false
@@ -70,7 +70,7 @@ jobs:
 
 
   stage_deployment:
-    needs: [ test ]
+    needs: [ build ]
     strategy:
       fail-fast: false
       matrix:
@@ -89,15 +89,15 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml
-      IMAGE: ${{ needs.test.outputs.image }}
+      IMAGE: ${{ needs.build.outputs.image }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
       PAT: ${{ secrets.STAGE_PAT }}
       GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
 
-  containerize_and_push_prod:
-    name: Server-Prod
+  prod_deployment:
+    needs: [ build ]
     strategy:
       fail-fast: false
       matrix:
@@ -116,7 +116,7 @@ jobs:
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
-      IMAGE: ${{ needs.test.outputs.image }}
+      IMAGE: ${{ needs.build.outputs.image }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:

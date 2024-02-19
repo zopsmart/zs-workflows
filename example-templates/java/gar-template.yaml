@@ -73,6 +73,7 @@ jobs:
       GAR_KEY: ${{ secrets.GAR_KEY }}
 
   prod_deployment:
+    needs: [ build ]
     strategy:
       fail-fast: false
       matrix:

@@ -54,8 +54,7 @@ jobs:
       PAT: '${{ secrets.PAT }}'
       NPM_TOKEN: '${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }}' //not required
   stage_deployment:
-    needs:
-      - build
+    needs: [ build ]
     strategy:
       fail-fast: false
       matrix:
@@ -82,6 +81,7 @@ jobs:
       GAR_KEY: '${{ secrets.STAGE_DEPLOY_KEY }}'
       PAT: '${{ secrets.STAGE_PAT }}'
   prod_deployment:
+    needs: [ build ]
     strategy:
       fail-fast: false
       matrix:
