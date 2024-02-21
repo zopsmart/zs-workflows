@@ -147,6 +147,7 @@ jobs:
           echo "  name: $CONFIG_MAP_NAME" >> $CONFIG_MAP_NAME.yaml
           echo "data:" >> $CONFIG_MAP_NAME.yaml
           echo "  environment.js: |" >> $CONFIG_MAP_NAME.yaml
+          echo "    if (typeof window !== 'undefined')" >> $CONFIG_MAP_NAME.yaml
           echo "    window.env = {" >> $CONFIG_MAP_NAME.yaml
           for key in "${!envArray[@]}"; do
             echo "      $key: "${envArray[$key]}"," >> $CONFIG_MAP_NAME.yaml
