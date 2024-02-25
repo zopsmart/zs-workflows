@@ -23,9 +23,9 @@ jobs:
       matrix:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
-            stage_namespace: ${{ vars.STAGE_NAMESPACE }}
-            prod_namespace: ${{ vars.PROD_NAMESPACE }}
             build_commands: "<build command>"
+            stage_env_file_path: "path of env file to store them in configmap of stage namespace"
+            prod_env_file_path: "path of env file to store them in configmap of prod namespace"
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
     with:
       POSTMAN_ENABLED: false
@@ -56,14 +56,9 @@ jobs:
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
-      CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
-      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
-      STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
-      PROD_NAMESPACE: ${{ matrix.prod_namespace }}
-      STAGE_ENV_FILE_PATH: ./configs/.stage.env
-      PROD_ENV_FILE_PATH: ./configs/.prod.env
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
-      REACT_APP:  # true if its react service, default is false skip this if not a react service
+      STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
+      PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
     secrets:
       PAT: ${{ secrets.PAT }} // not a mandatory field
       GAR_KEY: ${{ secrets.GAR_KEY }}
@@ -77,21 +72,23 @@ jobs:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
+            env_file_path: "path of env file to store them in configmap of stage namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
     uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
-      GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
-      GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml
-      IMAGE: ${{ needs.build.outputs.image }}
+      ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
+      REACT_APP:  # true if its react service, default is false skip this if not a react service
+      IMAGE: ${{ needs.build.outputs.image }}
+      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
     secrets:
       PAT: ${{ secrets.STAGE_PAT }}
       GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
@@ -104,6 +101,7 @@ jobs:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
+            env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
     uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
@@ -116,9 +114,12 @@ jobs:
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
-      IMAGE: ${{ needs.build.outputs.image }}
+      ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
+      REACT_APP:  # true if its react service, default is false skip this if not a react service
+      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
     secrets:
       PAT: ${{ secrets.PROD_PAT }}
       GAR_KEY: ${{ secrets.PROD_GAR_KEY }}

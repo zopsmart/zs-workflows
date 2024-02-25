@@ -1,4 +1,4 @@
-name: "Test, Build, Dockerise and Update-configmap"
+name: "Stage Deployment and Update-configmap"
 on:
   workflow_call:
     inputs:
@@ -13,15 +13,6 @@ on:
       DEPLOYMENT_TOOL:
         type: string
         description: "kubectl or helm"
-        required: true
-      IMAGE_REGISTRY:
-        type: string
-        required: true
-      GAR_PROJECT:
-        type: string
-        required: true
-      GAR_REGISTRY:
-        type: string
         required: true
       CLUSTER_PROJECT:
         type: string
@@ -38,6 +29,22 @@ on:
       IMAGE:
         type: string
         required: true
+      ONLY_CONFIGMAP:
+        type: string
+        required: true
+      ONLY_DEPLOYMENT:
+        type: string
+        required: true
+      ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
+      REACT_APP:
+        description: 'for react service'
+        type: boolean
+        required: false
+        default: false
 
     secrets:
       PAT:
@@ -49,11 +56,11 @@ on:
 jobs:
   stage_deployment:
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/development')
+    if: ${{ (github.ref == 'refs/heads/development') && inputs.ONLY_DEPLOYMENT == 'true' }}
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
       options: --rm
-    name: 🚀 Deploy
+    name: 🚀 Stage Deployment
     env:
       image: ${{ needs.dockerize.outputs.image }}
     steps:
@@ -92,5 +99,123 @@ jobs:
         if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'cron' }}
         run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ inputs.IMAGE }} --namespace ${{ inputs.NAMESPACE }}
 
+      - name: Read ENV Files
+        run: |
+          CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
+          ENV_FILE_PATH=${{ inputs.ENV_FILE_PATH }}
+
+          # Create an associative array to store key-value pairs
+          declare -A envArray
+
+          # Read each line in .env and extract key-value pairs
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if [ -z "$line" ] || [ "${line:0:1}" == "#" ]; then
+              continue
+            fi
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          done < "$ENV_FILE_PATH"
+
+          # Handle the case when the last line doesn't end with a newline character
+          if [[ -n "$line" ]]; then
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          fi
+          react="${{ inputs.REACT_APP }}"
+
+          # Read the .env file and create a ConfigMap YAML dynamically
+          echo "apiVersion: v1" > $CONFIG_MAP_NAME.yaml
+          echo "kind: ConfigMap" >> $CONFIG_MAP_NAME.yaml
+          echo "metadata:" >> $CONFIG_MAP_NAME.yaml
+          echo "  name: $CONFIG_MAP_NAME" >> $CONFIG_MAP_NAME.yaml
+          echo "data:" >> $CONFIG_MAP_NAME.yaml
+          if [[ $react == "true" ]]; then
+            echo "  environment.js: |" >> $CONFIG_MAP_NAME.yaml
+            echo "    if (typeof window !== 'undefined')" >> $CONFIG_MAP_NAME.yaml
+            echo "    window.env = {" >> $CONFIG_MAP_NAME.yaml
+            for key in "${!envArray[@]}"; do
+              echo "      $key: "${envArray[$key]}"," >> $CONFIG_MAP_NAME.yaml
+            done
+            echo "    }" >> $CONFIG_MAP_NAME.yaml
+          else
+            for key in "${!envArray[@]}"; do
+              echo "  $key: ${envArray[$key]}" >> $CONFIG_MAP_NAME.yaml
+            done
+          fi
+        shell: bash
+
+      - name: Update configmap
+        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
+
+  update_configmap:
+    runs-on: ubuntu-latest
+    if: ${{ ((inputs.ONLY_CONFIGMAP == 'true'  && inputs.ONLY_DEPLOYMENT != 'true') && github.ref == 'refs/heads/development') }}
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      options: --rm
+    name: Update Configmap
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_KEY }}
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Read ENV Files
+        run: |
+          CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
+          ENV_FILE_PATH="${{ inputs.ENV_FILE_PATH }}"
+
+          # Create an associative array to store key-value pairs
+          declare -A envArray
+
+          # Read each line in .env and extract key-value pairs
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if [ -z "$line" ] || [ "${line:0:1}" == "#" ]; then
+              continue
+            fi
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          done < "$ENV_FILE_PATH"
+
+          # Handle the case when the last line doesn't end with a newline character
+          if [[ -n "$line" ]]; then
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          fi
+          react="${{ inputs.REACT_APP }}"
+
+          # Read the .env file and create a ConfigMap YAML dynamically
+          echo "apiVersion: v1" > $CONFIG_MAP_NAME.yaml
+          echo "kind: ConfigMap" >> $CONFIG_MAP_NAME.yaml
+          echo "metadata:" >> $CONFIG_MAP_NAME.yaml
+          echo "  name: $CONFIG_MAP_NAME" >> $CONFIG_MAP_NAME.yaml
+          echo "data:" >> $CONFIG_MAP_NAME.yaml
+          if [[ $react == "true" ]]; then
+            echo "  environment.js: |" >> $CONFIG_MAP_NAME.yaml
+            echo "    if (typeof window !== 'undefined')" >> $CONFIG_MAP_NAME.yaml
+            echo "    window.env = {" >> $CONFIG_MAP_NAME.yaml
+            for key in "${!envArray[@]}"; do
+              echo "      $key: "${envArray[$key]}"," >> $CONFIG_MAP_NAME.yaml
+            done
+            echo "    }" >> $CONFIG_MAP_NAME.yaml
+          else
+            for key in "${!envArray[@]}"; do
+              echo "  $key: ${envArray[$key]}" >> $CONFIG_MAP_NAME.yaml
+            done
+          fi
+        shell: bash
+
+      - name: Update configmap
+        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
 
 

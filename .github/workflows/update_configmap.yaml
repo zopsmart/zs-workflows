@@ -10,22 +10,13 @@ on:
         description: 'name of configmap'
         required: true
         type: string
-      STAGE_NAMESPACE:
+      NAMESPACE:
         type: string
         required: true
-      PROD_NAMESPACE:
-        type: string
-        required: true
-      STAGE_ENV_FILE_PATH:
+      ENV_FILE_PATH:
         description: 'env file path'
         required: false
         type: string
-        default: "./configs/.stage.env"
-      PROD_ENV_FILE_PATH:
-        description: 'env file path'
-        required: false
-        type: string
-        default: "./configs/.stage.env"
       CLUSTER_PROJECT:
         type: string
         required: true
@@ -35,7 +26,7 @@ on:
       REACT_APP:
         description: 'for react service'
         type: boolean
-        required: false
+        required: true
         default: false
 jobs:
   check_modified_file:
@@ -52,7 +43,9 @@ jobs:
       - name: Check for Modified ConfigMap Files
         id: check_files
         run: |
-          if [[ $(git diff --name-only ${{ github.event.before }}..${{ github.sha }} | grep -E '\.(prod|stage)\.env') ]]; then
+          file_path="${{ inputs.ENV_FILE_PATH }}"
+          filename="${file_path##*/}"; filename="${filename%.*}"; filename="${filename#.}"
+          if git diff --name-only ${{ github.event.before }}..${{ github.sha }} | grep -q "\.$filename\.env"; then
              echo "modified_files=true" >> "$GITHUB_OUTPUT"
           else
             echo "modified_files=false" >> "$GITHUB_OUTPUT"
@@ -78,23 +71,12 @@ jobs:
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
-      - id: vars
-        run: |
-          if [ "${{ github.ref }}" = 'refs/heads/development' ]; then
-            echo "file_path=${{ inputs.STAGE_ENV_FILE_PATH }}" >> "$GITHUB_OUTPUT"
-            echo "namespace=${{ inputs.STAGE_NAMESPACE }}" >> "$GITHUB_OUTPUT"
-          fi
-          if [ "${{ github.ref }}" = 'refs/heads/main' ] || [ "${{ github.ref }}" == 'refs/heads/master' ]; then
-            echo "file_path=${{ inputs.PROD_ENV_FILE_PATH }}" >> "$GITHUB_OUTPUT"
-            echo "namespace=${{ inputs.PROD_NAMESPACE }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Read ENV Files
         if: ${{ !inputs.REACT_APP }}
         id: read-env
         run: |
           CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
-          ENV_FILE_PATH=${{ steps.vars.outputs.file_path }}
+          ENV_FILE_PATH=${{ inputs.ENV_FILE_PATH }}
 
           # Create an associative array to store key-value pairs
           declare -A envArray
@@ -131,7 +113,7 @@ jobs:
         if: ${{ inputs.REACT_APP }}
         run: |
           CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
-          ENV_FILE_PATH=${{ steps.vars.outputs.file_path }}
+          ENV_FILE_PATH=${{ inputs.ENV_FILE_PATH }}
 
           # Create an associative array to store key-value pairs
           declare -A envArray
@@ -168,4 +150,4 @@ jobs:
         shell: bash
 
       - name: Update configmap
-        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ steps.vars.outputs.namespace }}
+        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
