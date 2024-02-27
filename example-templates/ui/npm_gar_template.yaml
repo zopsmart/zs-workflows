@@ -18,7 +18,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_npm.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm.yaml@v0.2.5
     strategy:
       fail-fast: false
       matrix:
@@ -31,8 +31,7 @@ jobs:
     with:
       APP_NAME: ${{ matrix.app_name }}
       NODE_VERSION: '18.x'
-      BUILD_COMMAND: |
-        commands to build
+      BUILD_COMMAND: ${{ matrix.build_commands }}
       TEST_COMMAND: |
         CI=false npm run test:coverage
       LINTER_CHECKS: true
@@ -62,13 +61,14 @@ jobs:
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
 
-    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml
+      BUILD_COMMAND: ${{ matrix.build_commands }}
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
@@ -92,7 +92,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}

@@ -18,7 +18,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn.yaml@v0.2.5
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +31,9 @@ jobs:
     with:
       APP_NAME: ${{ matrix.app_name }}
       NODE_VERSION: '18.x'
+      BUILD_COMMAND: ${{ matrix.build_commands }}
+      TEST_COMMAND: |
+        CI=false yarn test:coverage
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
@@ -54,7 +57,7 @@ jobs:
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
 
-    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
@@ -84,7 +87,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
