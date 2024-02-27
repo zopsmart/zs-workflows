@@ -123,7 +123,7 @@ jobs:
 
       - name: Update Deployment Image using Helm
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' }}
-        run: helm upgrade --install --set image=${{ steps.prod-image.outputs.image }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.8
+        run: helm upgrade --install --set image=${{ steps.prod-image.outputs.image }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.9
 
       - name: Update Deployment Image using Kubectl
         if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' }}
