@@ -191,7 +191,7 @@ jobs:
 
 
       - name: Push Coverage Badge
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') (&& inputs.ENABLE_TESTS && steps.vars.outputs.only_deployment == 'true') }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS && steps.vars.outputs.only_deployment == 'true') }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT}}
