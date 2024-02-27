@@ -91,7 +91,7 @@ jobs:
       - name: Print tag_exists value
         run: |
           echo "${{ steps.tag-check.outputs.tag_exists }}"
-          
+  
 
   dockerize:
     name: 🐳 Dockerize Prod
@@ -117,7 +117,7 @@ jobs:
 
 
       - name: Re tag and Push Docker Image to GCR
-        run: | 
+        run: |
           docker pull gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
           docker tag gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
           docker push gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}

@@ -1,4 +1,4 @@
-name: "test and linters"
+name: 🧪 Test, 🔨 Build, and 🐳 Dockerize
 on:
   workflow_call:
     inputs:
@@ -27,18 +27,15 @@ on:
         description: 'command to load DB schema'
         required: false
         type: string
-
       EXTRA_DEPENDENCIES:
         description: 'enable step to install extra dependencies'
         required: false
         type: boolean
         default: false
-
       DEPENDENCIES_COMMAND:
         description: 'commands to install extra dependencies'
         required: false
         type: string
-
       MYSQL_ENABLE:
         required: false
         type: boolean
@@ -79,23 +76,82 @@ on:
         required: false
         type: boolean
         default: false
+      IMAGE_REGISTRY:
+        type: string
+        required: true
+      GAR_PROJECT:
+        type: string
+        required: true
+      GAR_REGISTRY:
+        type: string
+        required: true
+      DOCKER_FILE_PATH:
+        description: 'path of docker file'
+        required: true
+        type: string
+      BUILD_COMMAND:
+        description: 'go build command'
+        required: true
+        type: string
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
+      NAMESPACE:
+        type: string
+        required: true
+      CLUSTER_NAME:
+        type: string
+        required: true
+      CLUSTER_PROJECT:
+        type: string
+        required: true
+      REACT_APP:
+        description: 'for react service'
+        type: boolean
+        required: false
+        default: false
+      STAGE_ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
+      PROD_ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.prod.env"
 
-    outputs:
-      SHA:
-        description: "commit sha for image"
-        value: ${{ jobs.test.outputs.sha }}
+
     secrets:
       PAT:
-        description: 'pat of gofr'
-        required: false
+        description: 'required input'
+        required: true
+      GAR_KEY:
+        description: 'required input'
+        required: true
+
+    outputs:
+      IMAGE:
+        description: "Dockerize Image"
+        value: ${{ jobs.test.outputs.image }}
+      ONLY_CONFIGMAP:
+        description: "Whether only configmap values are updated"
+        value: ${{ jobs.test.outputs.only_configmap }}
+      ONLY_DEPLOYMENT:
+        description: "Whether only deployment should happen"
+        value: ${{ jobs.test.outputs.only_deployment }}
+
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: 🧪 Test and linters
-    if: (github.ref == 'refs/heads/development') || (github.ref == 'refs/heads/main')  || (github.ref == 'refs/heads/master') || github.event_name == 'pull_request'
+    name: 🧪 Test, 🔨 Build and 🐳 Dockerize
+    if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master' || github.event_name == 'pull_request') && !startsWith(github.ref, 'refs/tags/v') }}
     outputs:
-      sha: ${{ steps.output-sha.outputs.sha }}
+      image: ${{ steps.output-image.outputs.image }}
+      only_configmap: ${{ steps.vars.outputs.only_configmap }}
+      only_deployment: ${{ steps.vars.outputs.only_deployment }}
     services:
       mysql:
         image: ${{ inputs.MYSQL_ENABLE && 'mysql:8.0.30' || '' }}
@@ -178,27 +234,79 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Find Modified Files
+        id: files
+        uses: masesgroup/retrieve-changed-files@v2
+
+      - name: Print Modified Files
+        run: |
+          for added_modified_file in ${{ steps.files.outputs.all }}; do
+              echo "$added_modified_file"
+          done
+
+      - name: Check modified files
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == 'pull_request' ]]; then
+            if [[ "${{ github.base_ref }}" == 'main' || "${{ github.base_ref }}" == 'master' ]]; then
+              path="${{ inputs.PROD_ENV_FILE_PATH }}"
+            else
+              path="${{ inputs.STAGE_ENV_FILE_PATH }}"
+            fi
+          else
+            if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+              path="${{ inputs.PROD_ENV_FILE_PATH }}"
+            else
+              path="${{ inputs.STAGE_ENV_FILE_PATH }}"
+            fi
+          fi
+          file_path="$path"
+          file="${file_path#./}"
+          file="${file#/}"
+          if echo "${{ steps.files.outputs.all }}" | grep -q "$file"; then
+            only_configmap=true
+          else
+            only_configmap=false
+          fi          
+          dir=$(dirname "$file")
+          echo "$dir"
+          only_deployment=false
+          for added_modified_file in ${{ steps.files.outputs.all }}; do
+            if [[  "$added_modified_file" != *"$dir"* ]]; then
+              only_deployment=true
+              break
+            fi
+          done
+
+          echo "only_configmap=$only_configmap" >> "$GITHUB_OUTPUT"
+          echo "only_deployment=$only_deployment" >> "$GITHUB_OUTPUT"
+        shell: bash
+
       - uses: actions/setup-go@v4
+        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         with:
           go-version: '${{ inputs.GO_VERSION }}'
 
       - name: Add DB Schema
-        if: ${{ inputs.ADD_SCHEMA }}
+        if: ${{ inputs.ADD_SCHEMA && steps.vars.outputs.only_deployment == 'true' }}
         run: |
           ${{ inputs.SCHEMA_COMMAND }}
 
       - name: Get dependencies
+        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         run: |
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
 
       - name: Extra dependencies
-        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        if: ${{ inputs.EXTRA_DEPENDENCIES && steps.vars.outputs.only_deployment == 'true' }}
         run: |
           ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: golangci-lint
+        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.54.2
@@ -208,17 +316,19 @@ jobs:
 
 
       - name: Test
+        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         run: |
           mkdir -p temp/build
           GOFR_ENV=test go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
           cat temp/cover.out | grep -v "mock_interface" | grep -v "migrations" > temp/coverage.out
 
       - name: Test Coverage report
+        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         run: |
           go tool cover -func=temp/coverage.out | tee temp/c.out
 
       - name: Generate and Commit Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: ${{ (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.vars.outputs.only_deployment == 'true' }}
         run: |
           go install github.com/AlexBeauchemin/gobadge@latest
           gobadge -filename=temp/c.out -target=$(pwd)/README.md
@@ -227,23 +337,14 @@ jobs:
           git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md"
 
       - name: Push Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: ${{ (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.vars.outputs.only_deployment == 'true' }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ github.token }}
           branch: ${{github.ref}}
 
-      - id: output-sha
-        run: |
-          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
-            sha=$(git rev-parse HEAD)
-          else
-            sha="${{ github.sha }}"
-          fi
-          echo "$sha"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
       - name: Coverage Quality Gate
+        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         run: |
           echo "Quality Gate: checking test coverage is above threshold ..."
           echo "Threshold             : ${{ inputs.TESTCOVERAGE_THRESHOLD }}%"
@@ -259,17 +360,53 @@ jobs:
           fi
 
       - name: Run Server
-        if: ${{ inputs.POSTMAN_ENABLED }}
+        if: ${{ inputs.POSTMAN_ENABLED && steps.vars.outputs.only_deployment == 'true' }}
         run: |
           GOFR_ENV=test go run main.go &
           sleep 30
 
       - name: Install newman and Run Postman Collection
-        if: ${{ inputs.POSTMAN_ENABLED }}
+        if: ${{ inputs.POSTMAN_ENABLED && steps.vars.outputs.only_deployment == 'true' }}
         run: |
           npm install -g newman
           newman run postman-collections/${{ inputs.APP_NAME }}.postman-collection.json
 
       - name: Stop Server
-        if: ${{ inputs.POSTMAN_ENABLED }}
+        if: ${{ inputs.POSTMAN_ENABLED && steps.vars.outputs.only_deployment == 'true' }}
         run: pkill main
+
+
+      - name: Make Directory
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
+        run: mkdir build
+
+      - name: Build
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
+        run: |
+          cd ${{ inputs.DOCKER_FILE_PATH }}
+          ls
+          pwd
+          ${{ inputs.BUILD_COMMAND }}
+
+      - name: Login to GAR
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.only_deployment == 'true' }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.IMAGE_REGISTRY }}
+          username: _json_key
+          password: ${{ secrets.GAR_KEY }}
+
+      - name: Push Docker Image to GAR
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.only_deployment == 'true' }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
+          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
+
+      - id: output-image
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.only_deployment == 'true' }}
+        run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"

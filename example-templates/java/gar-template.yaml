@@ -1,0 +1,101 @@
+name: Build and Deploy Service
+
+on:
+  pull_request:
+    types: [review_requested]
+    branches:
+      - main
+      - master
+      - development
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+      - master
+      - development
+
+jobs:
+  build:
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@main
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app_name: ${{ vars.STAGE_APP_NAME }}
+            build_commands: "<build command>"
+            stage_env_file_path: "path of env file to store them in configmap of stage namespace"
+            prod_env_file_path: "path of env file to store them in configmap of prod namespace"
+            DOCKER_FILE_PATH: "Dockerfile" #path of dockerfile including the name of the file
+    with:
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
+      GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
+      DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
+      STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
+      PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
+    secrets:
+      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
+      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
+      GAR_KEY: ${{ secrets.GAR_KEY }}
+
+  stage_deployment:
+    needs: [ build ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app_name: "training-api"
+            namespace: "training-stage"
+            env_file_path: "path of env file to store them in configmap of stage namespace"
+            type: "deployment"
+            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
+    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
+    with:
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
+      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
+      CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
+      HELM_VALUES_PATH: './helm-values/stage.yaml'
+      TYPE: ${{ matrix.type }}
+      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
+      ENV_FILE_PATH: ${{ matrix.env_file_path }}
+      IMAGE: ${{ needs.build.outputs.image }}
+      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
+
+    secrets:
+      PAT: ${{ secrets.PAT }}
+      GAR_KEY: ${{ secrets.GAR_KEY }}
+
+  prod_deployment:
+    needs: [ build ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app_name: "training-api"
+            namespace: "training"
+            env_file_path: "path of env file to store them in configmap of prod namespace"
+            type: "deployment"
+            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
+    with:
+      APP_NAME: ${{ matrix.app_name }}
+      NAMESPACE: ${{ matrix.namespace }}
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
+      GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
+      CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
+      CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
+      HELM_VALUES_PATH: './helm-values/prod.yaml'
+      ENV_FILE_PATH: ${{ matrix.env_file_path }}
+      TYPE: ${{ matrix.type }}
+      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
+      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
+
+    secrets:
+      PAT: ${{ secrets.PAT }}
+      GAR_KEY: ${{ secrets.GAR_KEY }}
+

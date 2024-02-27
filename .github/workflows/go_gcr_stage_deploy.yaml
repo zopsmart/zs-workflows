@@ -171,7 +171,7 @@ jobs:
             ${{ inputs.BUILD_ARGUMENTS }}
       - id: output-image
         run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
-          
+
   update_configmap:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/development')
     uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
@@ -209,7 +209,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.DEPLOY_KEY }}
-          
+
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }}  --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
@@ -220,4 +220,3 @@ jobs:
       - name: Update Cron Image
         if: ${{ inputs.TYPE == 'cron' }}
         run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
-
