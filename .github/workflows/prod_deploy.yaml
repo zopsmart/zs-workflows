@@ -1,4 +1,4 @@
-name: "Test, Build, Dockerise and Update-configmap"
+name: "Prod Deployment and Update-configmap"
 on:
   workflow_call:
     inputs:

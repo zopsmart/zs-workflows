@@ -1,4 +1,4 @@
-name: 🧪 Test, 🔨 Build, 🐳 Dockerize and Update Configmap
+name: 🧪 Test, 🔨 Build, and 🐳 Dockerize
 on:
   workflow_call:
     inputs:
