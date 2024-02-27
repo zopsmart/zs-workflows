@@ -235,10 +235,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: files
+      - name: Find Modified Files
+        id: files
         uses: masesgroup/retrieve-changed-files@v2
 
-      - name: Print
+      - name: Print Modified Files
         run: |
           for added_modified_file in ${{ steps.files.outputs.all }}; do
               echo "$added_modified_file"
@@ -281,11 +282,6 @@ jobs:
           echo "only_configmap=$only_configmap" >> "$GITHUB_OUTPUT"
           echo "only_deployment=$only_deployment" >> "$GITHUB_OUTPUT"
         shell: bash
-
-      - name: Print envs
-        run: |
-          echo "${{ steps.vars.outputs.only_configmap }}"
-          echo "${{ steps.vars.outputs.only_deployment }}"
 
       - uses: actions/setup-go@v4
         if: ${{ steps.vars.outputs.only_deployment == 'true' }}
