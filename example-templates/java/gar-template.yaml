@@ -17,13 +17,12 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.2.5
     strategy:
       fail-fast: false
       matrix:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
-            build_commands: "<build command>"
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
             DOCKER_FILE_PATH: "Dockerfile" #path of dockerfile including the name of the file
@@ -50,7 +49,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of stage namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
@@ -79,7 +78,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
