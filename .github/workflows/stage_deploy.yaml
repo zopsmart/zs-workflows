@@ -67,10 +67,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Helm Chart
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
-        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
-
       - name: Authorize to GCP service account
         uses: google-github-actions/auth@v1
         with:
@@ -217,5 +213,3 @@ jobs:
 
       - name: Update configmap
         run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
-
-

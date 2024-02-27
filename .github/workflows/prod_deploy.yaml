@@ -70,10 +70,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Helm Chart
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
-        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
-
       - name: Authorize to GCP service account
         uses: google-github-actions/auth@v1
         with:
@@ -86,6 +82,7 @@ jobs:
             --username "${{ github.actor }}" \
             --password "${{ secrets.PAT }}" \
             "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
+
       - name: Check if image tag exists
         if: ${{ startsWith(github.ref, 'refs/tags/v')}}
         id: tag-check
