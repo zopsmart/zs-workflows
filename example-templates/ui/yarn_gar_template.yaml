@@ -18,7 +18,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn.yaml@v0.2.5
+    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn.yaml@v0.2.6
     strategy:
       fail-fast: false
       matrix:
@@ -57,7 +57,7 @@ jobs:
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
 
-    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.5
+    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.6
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
@@ -87,7 +87,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.5
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.6
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
