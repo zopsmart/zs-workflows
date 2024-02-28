@@ -87,8 +87,8 @@ jobs:
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
       IMAGE: ${{ needs.build.outputs.image }}
-      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
+      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
     secrets:
       PAT: ${{ secrets.STAGE_PAT }}
       GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
@@ -118,8 +118,8 @@ jobs:
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
-      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
+      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
     secrets:
       PAT: ${{ secrets.PROD_PAT }}
       GAR_KEY: ${{ secrets.PROD_GAR_KEY }}
