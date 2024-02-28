@@ -17,7 +17,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.2.6
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.2.8
     strategy:
       fail-fast: false
       matrix:
@@ -48,23 +48,25 @@ jobs:
             namespace: "training-stage"
             env_file_path: "path of env file to store them in configmap of stage namespace"
             type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.6
+            deployment_tool: "kubectl" #deployment tool to use for deploying the application either helm or kubectl
+    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.8
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
-      HELM_VALUES_PATH: './helm-values/stage.yaml'
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
+      GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
-      IMAGE: ${{ needs.build.outputs.image }}
+      SHA: ${{ needs.build.outputs.SHA }}
       ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
       ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
-      PAT: ${{ secrets.PAT }}
+      PAT: ${{ secrets.PAT }}  #not a mandatory field, use PAT if using helm as deployment tool
       GAR_KEY: ${{ secrets.GAR_KEY }}
 
   prod_deployment:
@@ -77,8 +79,8 @@ jobs:
             namespace: "training"
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.6
+            deployment_tool: "kubectl" #deployment tool to use for deploying the application either helm or kubectl
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.8
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
@@ -87,7 +89,6 @@ jobs:
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
-      HELM_VALUES_PATH: './helm-values/prod.yaml'
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
@@ -95,6 +96,6 @@ jobs:
       ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
-      PAT: ${{ secrets.PAT }}
+      PAT: ${{ secrets.PAT }} #not a mandatory field, use PAT if using helm as deployment tool
       GAR_KEY: ${{ secrets.GAR_KEY }}
 

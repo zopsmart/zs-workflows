@@ -2,9 +2,9 @@ name: 🧪 Test, 🔨 Build, and 🐳 Dockerize
 on:
   workflow_call:
     outputs:
-      IMAGE:
-        description: "Dockerize Image"
-        value: ${{ jobs.test.outputs.image }}
+      SHA:
+        description: "Image tag"
+        value: ${{ jobs.test.outputs.sha }}
       ONLY_CONFIGMAP:
         description: "Whether only configmap values are updated"
         value: ${{ jobs.test.outputs.only_configmap }}
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master' || github.event_name == 'pull_request') && !startsWith(github.ref, 'refs/tags/v') }}
     outputs:
-      image: ${{ steps.output-image.outputs.image }}
+      sha: ${{ steps.output-sha.outputs.sha }}
       only_configmap: ${{ steps.vars.outputs.only_configmap }}
       only_deployment: ${{ steps.vars.outputs.only_deployment }}
     steps:
@@ -149,6 +149,6 @@ jobs:
           build-args: |
             ${{ inputs.BUILD_ARGUMENTS }}
 
-      - id: output-image
+      - id: output-sha
         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.only_deployment == 'true' }}
-        run: echo "image=`echo  ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "sha=`echo ${{ github.sha }}`" >> "$GITHUB_OUTPUT"
