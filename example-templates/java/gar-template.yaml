@@ -60,8 +60,8 @@ jobs:
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       IMAGE: ${{ needs.build.outputs.image }}
-      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
+      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
       PAT: ${{ secrets.PAT }}
@@ -91,8 +91,8 @@ jobs:
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
-      ONLY_CONFIGMAP: ${{ needs.test.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.test.outputs.ONLY_DEPLOYMENT }}
+      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
+      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
       PAT: ${{ secrets.PAT }}
