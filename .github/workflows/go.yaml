@@ -97,20 +97,6 @@ on:
         description: 'build arguments for DockerFile'
         required: false
         type: string
-      NAMESPACE:
-        type: string
-        required: true
-      CLUSTER_NAME:
-        type: string
-        required: true
-      CLUSTER_PROJECT:
-        type: string
-        required: true
-      REACT_APP:
-        description: 'for react service'
-        type: boolean
-        required: false
-        default: false
       STAGE_ENV_FILE_PATH:
         description: 'env file path'
         required: false
