@@ -197,6 +197,16 @@ jobs:
           github_token: ${{ secrets.PAT}}
           branch: ${{github.ref}}
 
+      - id: latest-commit
+        run: |
+          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/${{ inputs.BRANCH_NAME }}' ]]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Generating build
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
         run: |
@@ -217,11 +227,11 @@ jobs:
           push: true
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}
-          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.latest-commit.outputs.sha }}
           build-args: |
             NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-sha
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
-        run: echo "sha=`echo ${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "sha=`echo ${{ steps.latest-commit.outputs.sha }}`" >> "$GITHUB_OUTPUT"
