@@ -53,10 +53,10 @@ on:
         default: false
     secrets:
       PAT:
-        description: 'required input'
-        required: true
+        description: 'pat for helm'
+        required: false
       GAR_KEY:
-        description: 'required input'
+        description: 'gar key'
         required: true
 jobs:
   prod_deployment:
