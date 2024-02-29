@@ -192,21 +192,6 @@ jobs:
           github_token: ${{ secrets.PAT }}
           branch: ${{ github.ref }}
 
-      - id: latest-commit
-        run: |
-          if [[ "${{ github.event_name }}" == 'push' && "${{ github.ref }}" == 'refs/heads/${{ inputs.BRANCH_NAME }}' ]]; then
-            sha=$(git rev-parse HEAD)
-          else
-            sha="${{ github.sha }}"
-          fi
-          echo "$sha"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-      - name: Generating build
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
-        run: |
-          ${{ inputs.BUILD_COMMAND }}
-
       - name: Login to GAR
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
         uses: docker/login-action@v2

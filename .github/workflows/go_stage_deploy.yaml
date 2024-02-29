@@ -1,0 +1,337 @@
+name: "Stage Deployment and Update-configmap"
+on:
+  workflow_call:
+    inputs:
+      APP_NAME:
+        description: 'name of postman collection file'
+        required: true
+        type: string
+      TYPE:
+        type: string
+        description: "deployment or cron"
+        required: true
+      DEPLOYMENT_TOOL:
+        type: string
+        description: "kubectl or helm"
+        required: true
+      CLUSTER_PROJECT:
+        type: string
+        required: true
+      CLUSTER_NAME:
+        type: string
+        required: true
+      NAMESPACE:
+        type: string
+        required: true
+      HELM_VALUES_PATH:
+        type: string
+        required: false
+      IMAGE_REGISTRY:
+        type: string
+        required: true
+      GAR_PROJECT:
+        type: string
+        required: true
+      GAR_REGISTRY:
+        type: string
+        required: true
+      DOCKER_FILE_PATH:
+        description: 'path of docker file'
+        required: true
+        type: string
+      BUILD_COMMAND:
+        description: 'go build command'
+        required: true
+        type: string
+      BUILD_ARGUMENTS:
+        description: 'build arguments for DockerFile'
+        required: false
+        type: string
+      STAGE_ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.stage.env"
+      PROD_ENV_FILE_PATH:
+        description: 'env file path'
+        required: false
+        type: string
+        default: "./configs/.prod.env"
+      REACT_APP:
+        description: 'for react service'
+        type: boolean
+        required: false
+        default: false
+
+    secrets:
+      PAT:
+        description: 'pat for helm'
+        required: false
+      GAR_KEY:
+        description: 'gar key'
+        required: true
+jobs:
+  build_dockerize:
+    runs-on: ubuntu-latest
+    name: 🔨 Build and 🐳 Dockerize
+    if: (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master') && (!startsWith(github.ref, 'refs/tags/v'))
+    outputs:
+      image: ${{ steps.output-image.outputs.image }}
+      deployment: ${{ steps.vars.outputs.deployment }}
+      configmap: ${{ steps.vars.outputs.configmap }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Find Modified Files
+        id: files
+        uses: masesgroup/retrieve-changed-files@v2
+
+      - name: Print Modified Files
+        run: |
+          for added_modified_file in ${{ steps.files.outputs.all }}; do
+              echo "$added_modified_file"
+          done
+
+      - name: Check modified files
+        id: vars
+        run: |
+          if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+              path="${{ inputs.PROD_ENV_FILE_PATH }}"
+          else
+              path="${{ inputs.STAGE_ENV_FILE_PATH }}"
+          fi
+          file_path="$path"
+          file="${file_path#./}"
+          file="${file#/}"
+          if echo "${{ steps.files.outputs.all }}" | grep -q "$file"; then
+            configmap=true
+          else
+            configmap=false
+          fi          
+          deployment=false
+          for added_modified_file in ${{ steps.files.outputs.all }}; do
+              file="$added_modified_file"
+              if [[ $file != *".stage.env"*  && $file != *".prod.env"* ]]; then
+                deployment=true
+                break
+              fi
+          done
+          echo "$configmap"
+          echo "$deployment"
+
+          echo "configmap=$configmap" >> "$GITHUB_OUTPUT"
+          echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - id: output-sha
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        run: |
+          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Make Directory
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        run: mkdir build
+
+      - name: Build
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        run: |
+          cd ${{ inputs.DOCKER_FILE_PATH }}
+          ls
+          pwd
+          ${{ inputs.BUILD_COMMAND }}
+
+      - name: Login to GAR
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.IMAGE_REGISTRY }}
+          username: _json_key
+          password: ${{ secrets.GAR_KEY }}
+
+      - name: Push Docker Image to GAR
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: .
+          file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
+          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.output-sha.outputs.sha }}
+          build-args: |
+            ${{ inputs.BUILD_ARGUMENTS }}
+
+      - id: output-image
+        if: ${{ (github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+
+  stage_deployment:
+    runs-on: ubuntu-latest
+    if: ${{ (github.ref == 'refs/heads/development') && needs.build_dockerize.outputs.deployment == 'true' }}
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      options: --rm
+    name: 🚀 Stage Deployment and Update Configmap
+    env:
+      image: ${{ needs.build_dockerize.outputs.image }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_KEY }}
+
+      - name: Add Helm Repo
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
+        run: |
+          helm repo add helm \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.PAT }}" \
+            "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Update Deployment Image using Helm
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' }}
+        run: helm upgrade --install --set image=${{ env.image }}:${{ inputs.SHA }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.9
+
+      - name: Update Deployment Image using Kubectl
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' }}
+        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+
+      - name: Update Cron Image
+        if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'cron' }}
+        run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+
+      - name: Read ENV Files
+        run: |
+          CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
+          ENV_FILE_PATH=${{ inputs.STAGE_ENV_FILE_PATH }}
+
+          # Create an associative array to store key-value pairs
+          declare -A envArray
+
+          # Read each line in .env and extract key-value pairs
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if [ -z "$line" ] || [ "${line:0:1}" == "#" ]; then
+              continue
+            fi
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          done < "$ENV_FILE_PATH"
+
+          # Handle the case when the last line doesn't end with a newline character
+          if [[ -n "$line" ]]; then
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          fi
+          react="${{ inputs.REACT_APP }}"
+
+          # Read the .env file and create a ConfigMap YAML dynamically
+          echo "apiVersion: v1" > $CONFIG_MAP_NAME.yaml
+          echo "kind: ConfigMap" >> $CONFIG_MAP_NAME.yaml
+          echo "metadata:" >> $CONFIG_MAP_NAME.yaml
+          echo "  name: $CONFIG_MAP_NAME" >> $CONFIG_MAP_NAME.yaml
+          echo "data:" >> $CONFIG_MAP_NAME.yaml
+          if [[ $react == "true" ]]; then
+            echo "  environment.js: |" >> $CONFIG_MAP_NAME.yaml
+            echo "    if (typeof window !== 'undefined')" >> $CONFIG_MAP_NAME.yaml
+            echo "    window.env = {" >> $CONFIG_MAP_NAME.yaml
+            for key in "${!envArray[@]}"; do
+              echo "      $key: "${envArray[$key]}"," >> $CONFIG_MAP_NAME.yaml
+            done
+            echo "    }" >> $CONFIG_MAP_NAME.yaml
+          else
+            for key in "${!envArray[@]}"; do
+              echo "  $key: ${envArray[$key]}" >> $CONFIG_MAP_NAME.yaml
+            done
+          fi
+        shell: bash
+
+      - name: Update configmap
+        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
+
+  update_configmap:
+    runs-on: ubuntu-latest
+    name: Update Only Configmap
+    needs: [ build_dockerize ]
+    container:
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      options: --rm
+    if: ${{ needs.build_dockerize.outputs.configmap == 'true' && needs.build_dockerize.outputs.deployment != 'true' }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authorize to GCP service account
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_KEY }}
+
+      - name: Set GCloud Project and Fetch Cluster Credentials
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+
+      - name: Read ENV Files
+        run: |
+          if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+              path="${{ inputs.PROD_ENV_FILE_PATH }}"
+          else
+              path="${{ inputs.STAGE_ENV_FILE_PATH }}"
+          fi
+          CONFIG_MAP_NAME=${{ inputs.APP_NAME }}
+          ENV_FILE_PATH=$path
+
+          # Create an associative array to store key-value pairs
+          declare -A envArray
+
+          # Read each line in .env and extract key-value pairs
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if [ -z "$line" ] || [ "${line:0:1}" == "#" ]; then
+              continue
+            fi
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          done < "$ENV_FILE_PATH"
+
+          # Handle the case when the last line doesn't end with a newline character
+          if [[ -n "$line" ]]; then
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          fi
+          react="${{ inputs.REACT_APP }}"
+
+          # Read the .env file and create a ConfigMap YAML dynamically
+          echo "apiVersion: v1" > $CONFIG_MAP_NAME.yaml
+          echo "kind: ConfigMap" >> $CONFIG_MAP_NAME.yaml
+          echo "metadata:" >> $CONFIG_MAP_NAME.yaml
+          echo "  name: $CONFIG_MAP_NAME" >> $CONFIG_MAP_NAME.yaml
+          echo "data:" >> $CONFIG_MAP_NAME.yaml
+          if [[ $react == "true" ]]; then
+            echo "  environment.js: |" >> $CONFIG_MAP_NAME.yaml
+            echo "    if (typeof window !== 'undefined')" >> $CONFIG_MAP_NAME.yaml
+            echo "    window.env = {" >> $CONFIG_MAP_NAME.yaml
+            for key in "${!envArray[@]}"; do
+              echo "      $key: "${envArray[$key]}"," >> $CONFIG_MAP_NAME.yaml
+            done
+            echo "    }" >> $CONFIG_MAP_NAME.yaml
+          else
+            for key in "${!envArray[@]}"; do
+              echo "  $key: ${envArray[$key]}" >> $CONFIG_MAP_NAME.yaml
+            done
+          fi
+        shell: bash
+
+      - name: Update configmap
+        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}

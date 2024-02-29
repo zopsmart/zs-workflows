@@ -17,66 +17,54 @@ on:
       - development
 
 jobs:
-  build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn.yaml@v0.2.8
+  test:
+    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn.yaml@v0.2.9
+    with:
+      APP_NAME: ${{ vars.APP_NAME }}
+      NODE_VERSION: '18.x'
+      TEST_COMMAND: |
+        CI=false yarn test:coverage
+      LINTER_CHECKS: 'to enable linter checks, default is true'
+      PRETTIER_CHECKS: 'to enable prettier, default is true'
+      ENABLE_TESTS: 'to create coverage badge, default is true'
+    secrets:
+      PAT: ${{ secrets.PAT }}
+
+  dockerize_deploy:
+    needs: [ test ]
     strategy:
       fail-fast: false
       matrix:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             build_commands: "<build command>"
+            DOCKER_FILE_PATH: "Dockerfile" #path of dockerfile including the name of the file
+            namespace: ${{ vars.STAGE_NAMESPACE }}
+            type: "deployment"
+            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
-            DOCKER_FILE_PATH: "Dockerfile" #path of dockerfile including the name of the file
+
+    uses: zopsmart/zs-workflows/.github/workflows/yarn_stage_deploy.yaml@v0.2.9
     with:
       APP_NAME: ${{ matrix.app_name }}
-      NODE_VERSION: '18.x'
       BUILD_COMMAND: ${{ matrix.build_commands }}
-      TEST_COMMAND: |
-        CI=false yarn test:coverage
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
-      GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
-      GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
-    secrets:
-      PAT: ${{ secrets.PAT }}
-      NPM_TOKEN: ${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }} #not required
-      GAR_KEY: ${{ secrets.GAR_KEY }}
-
-  stage_deployment:
-    needs: [build]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app_name: ${{ vars.STAGE_APP_NAME }}
-            namespace: ${{ vars.STAGE_NAMESPACE }}
-            env_file_path: "path of env file to store them in configmap of stage namespace"
-            type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-
-    uses: zopsmart/zs-workflows/.github/workflows/stage_deploy.yaml@v0.2.8
-    with:
-      APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
-      HELM_VALUES_PATH: ./helm-values/stage.yaml
-      ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
-      SHA: ${{ needs.build.outputs.SHA }}
-      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
       PAT: ${{ secrets.STAGE_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
+      NPM_TOKEN: ${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }} #not required
       GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
 
   prod_deployment:
@@ -90,7 +78,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.8
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.9
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
@@ -99,14 +87,10 @@ jobs:
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
-      HELM_VALUES_PATH: ./helm-values/prod.yaml
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
-      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
-
     secrets:
       PAT: ${{ secrets.PROD_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
       GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}
