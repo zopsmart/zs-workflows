@@ -20,10 +20,6 @@ on:
         description: 'node version'
         type: string
         required: true
-      BUILD_COMMAND:
-        description: 'node build command'
-        required: true
-        type: string
       TEST_COMMAND:
         description: 'command to run test files'
         required: false
@@ -45,41 +41,6 @@ on:
         required: false
         type: boolean
         default: true
-      DOCKER_FILE_PATH:
-        description: 'path of docker file'
-        required: true
-        type: string
-      IMAGE_REGISTRY:
-        type: string
-        required: true
-      GAR_PROJECT:
-        type: string
-        required: true
-      GAR_REGISTRY:
-        type: string
-        required: true
-      STAGE_ENV_FILE_PATH:
-        description: 'env file path'
-        required: false
-        type: string
-        default: "./configs/.stage.env"
-      PROD_ENV_FILE_PATH:
-        description: 'env file path'
-        required: false
-        type: string
-        default: "./configs/.prod.env"
-
-
-    outputs:
-      SHA:
-        description: "Image tag"
-        value: ${{ jobs.test.outputs.sha }}
-      ONLY_CONFIGMAP:
-        description: "Whether only configmap values are updated"
-        value: ${{ jobs.test.outputs.only_configmap }}
-      ONLY_DEPLOYMENT:
-        description: "Whether only deployment should happen"
-        value: ${{ jobs.test.outputs.only_deployment }}
 
 env:
   event_flag: ${{ github.event_name == 'push' }}
@@ -95,62 +56,11 @@ jobs:
       only_deployment: ${{ steps.vars.outputs.only_deployment }}
     steps:
       - uses: actions/checkout@v3
-
-      - name: Find Modified Files
-        id: files
-        uses: masesgroup/retrieve-changed-files@v2
-
-      - name: Print Modified Files
-        run: |
-          for added_modified_file in ${{ steps.files.outputs.all }}; do
-              echo "$added_modified_file"
-          done
-
-      - name: Check modified files
-        id: vars
-        run: |
-          if [[ "${{ github.event_name }}" == 'pull_request' ]]; then
-            if [[ "${{ github.base_ref }}" == 'main' || "${{ github.base_ref }}" == 'master' ]]; then
-              path="${{ inputs.PROD_ENV_FILE_PATH }}"
-            else
-              path="${{ inputs.STAGE_ENV_FILE_PATH }}"
-            fi
-          else
-            if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
-              path="${{ inputs.PROD_ENV_FILE_PATH }}"
-            else
-              path="${{ inputs.STAGE_ENV_FILE_PATH }}"
-            fi
-          fi
-          file_path="$path"
-          file="${file_path#./}"
-          file="${file#/}"
-          if echo "${{ steps.files.outputs.all }}" | grep -q "$file"; then
-            only_configmap=true
-          else
-            only_configmap=false
-          fi          
-          dir=$(dirname "$file")
-          echo "$dir"
-          only_deployment=false
-          for added_modified_file in ${{ steps.files.outputs.all }}; do
-            if [[  "$added_modified_file" != *"$dir"* ]]; then
-              only_deployment=true
-              break
-            fi
-          done
-
-          echo "only_configmap=$only_configmap" >> "$GITHUB_OUTPUT"
-          echo "only_deployment=$only_deployment" >> "$GITHUB_OUTPUT"
-        shell: bash
-
       - uses: actions/setup-node@v3
-        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         with:
           node-version: ${{ inputs.NODE_VERSION }}
 
       - name: installing dependencies and zipping node modules
-        if: ${{ steps.vars.outputs.only_deployment == 'true' }}
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
@@ -158,27 +68,27 @@ jobs:
           tar -zcf node_modules.zip node_modules/
 
       - name: run linter
-        if: ${{ inputs.LINTER_CHECKS && steps.vars.outputs.only_deployment == 'true' }}
+        if: ${{ inputs.LINTER_CHECKS }}
         run: |
           CI=false yarn lint
 
       - name: run prettier
-        if: ${{ inputs.PRETTIER_CHECKS && steps.vars.outputs.only_deployment == 'true' }}
+        if: ${{ inputs.PRETTIER_CHECKS }}
         run: |
           CI=false yarn prettier:check
 
       - name: run tests
-        if: ${{ inputs.ENABLE_TESTS && steps.vars.outputs.only_deployment == 'true' }}
+        if: ${{ inputs.ENABLE_TESTS  }}
         run: |
           ${{ inputs.TEST_COMMAND }}
 
       - name: Generate Coverage Badges
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS && steps.vars.outputs.only_deployment == 'true') }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS) }}
         run: |
           CI=false yarn make-badges
 
       - name: Commit Badge changes
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS && steps.vars.outputs.only_deployment == 'true') }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS) }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -186,32 +96,8 @@ jobs:
 
 
       - name: Push Coverage Badge
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS && steps.vars.outputs.only_deployment == 'true') }}
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (inputs.ENABLE_TESTS) }}
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.PAT }}
           branch: ${{ github.ref }}
-
-      - name: Login to GAR
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ inputs.IMAGE_REGISTRY }}
-          username: _json_key
-          password: ${{ secrets.GAR_KEY }}
-
-      - name: Push Docker Image to GAR
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          context: .
-          file: ${{ inputs.DOCKER_FILE_PATH }}
-          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.latest-commit.outputs.sha }}
-          build-args: |
-            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
-            ${{ inputs.BUILD_ARGUMENTS }}
-
-      - id: output-sha
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.only_deployment == 'true' }}
-        run: echo "sha=`echo ${{ steps.latest-commit.outputs.sha }}`" >> "$GITHUB_OUTPUT"
