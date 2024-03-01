@@ -95,8 +95,6 @@ jobs:
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
-      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
       PAT: ${{ secrets.PROD_PAT }} #not a mandatory field, use PAT if using helm as deployment tool

@@ -74,8 +74,6 @@ jobs:
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
-      ONLY_CONFIGMAP: ${{ needs.build.outputs.ONLY_CONFIGMAP }}
-      ONLY_DEPLOYMENT: ${{ needs.build.outputs.ONLY_DEPLOYMENT }}
 
     secrets:
       PAT: ${{ secrets.PAT }} #not a mandatory field, use PAT if using helm as deployment tool
