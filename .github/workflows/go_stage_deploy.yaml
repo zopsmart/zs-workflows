@@ -171,7 +171,7 @@ jobs:
 
       - id: output-image
         if: ${{ (github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
-        run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ github.sha }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.output-sha.outputs.sha }}`" >> "$GITHUB_OUTPUT"
 
   stage_deployment:
     runs-on: ubuntu-latest
