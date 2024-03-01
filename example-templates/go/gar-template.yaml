@@ -52,7 +52,8 @@ jobs:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             build_commands: "<build command>"
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
-            namespace: ${{ vars.STAGE_NAMESPACE }}
+            stage_namespace: ${{ vars.STAGE_NAMESPACE }}
+            prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
@@ -65,7 +66,8 @@ jobs:
       HELM_VALUES_PATH: ./helm-values/stage.yaml #not a mandatory field, use HELM_VALUES_PATH if deployment tool is helm
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
-      NAMESPACE: ${{ matrix.namespace }}
+      STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
+      PROD_NAMESPACE: ${{ matrix.prod_namespace }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
@@ -83,7 +85,7 @@ jobs:
       matrix:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
-            namespace: ${{ vars.STAGE_NAMESPACE }}
+            namespace: ${{ vars.PROD_NAMESPACE }}
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl

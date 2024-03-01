@@ -25,7 +25,8 @@ jobs:
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
             DOCKER_FILE_PATH: "Dockerfile" #path of dockerfile including the name of the file
-            namespace: "training-stage"
+            stage_namespace: ${{ vars.STAGE_NAMESPACE }}
+            prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
             deployment_tool: "kubectl" #deployment tool to use for deploying the application either helm or kubectl
 
@@ -35,7 +36,8 @@ jobs:
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
-      NAMESPACE: ${{ matrix.namespace }}
+      STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
+      PROD_NAMESPACE: ${{ matrix.prod_namespace }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev

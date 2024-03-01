@@ -20,7 +20,10 @@ on:
       CLUSTER_NAME:
         type: string
         required: true
-      NAMESPACE:
+      STAGE_NAMESPACE:
+        type: string
+        required: true
+      PROD_NAMESPACE:
         type: string
         required: true
       HELM_VALUES_PATH:
@@ -201,15 +204,15 @@ jobs:
 
       - name: Update Deployment Image using Helm
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' }}
-        run: helm upgrade --install --set image=${{ env.image }}:${{ inputs.SHA }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.9
+        run: helm upgrade --install --set image=${{ env.image }}:${{ inputs.SHA }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.STAGE_NAMESPACE }} --version v0.1.9
 
       - name: Update Deployment Image using Kubectl
         if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' }}
-        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+        run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.STAGE_NAMESPACE }}
 
       - name: Update Cron Image
         if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'cron' }}
-        run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.NAMESPACE }}
+        run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ env.image }} --namespace ${{ inputs.STAGE_NAMESPACE }}
 
       - name: Read ENV Files
         run: |
@@ -259,7 +262,7 @@ jobs:
         shell: bash
 
       - name: Update configmap
-        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
+        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.STAGE_NAMESPACE }}
 
   update_configmap:
     runs-on: ubuntu-latest
@@ -334,4 +337,10 @@ jobs:
         shell: bash
 
       - name: Update configmap
-        run: kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
+        run: |
+          if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+              namespace="${{ inputs.PROD_NAMESPACE }}"
+          else
+              namespace="${{ inputs.STAGE_NAMESPACE }}"
+          fi
+          kubectl apply --force -f ${{ inputs.APP_NAME }}.yaml -n $namespace
