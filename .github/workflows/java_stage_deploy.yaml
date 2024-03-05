@@ -69,9 +69,6 @@ on:
       GAR_KEY:
         description: 'gar key'
         required: true
-      NPM_TOKEN:
-        description: 'npm token'
-        required: false
       GH_USERNAME:
         description: 'required input'
         required: true
@@ -175,7 +172,6 @@ jobs:
           file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
           tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.output-sha.outputs.sha }}
           build-args: |
-            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-image
