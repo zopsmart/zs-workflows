@@ -5,9 +5,6 @@ on:
       PAT:
         description: 'github token'
         required: true
-      GAR_KEY:
-        description: 'required input'
-        required: true
       NPM_TOKEN:
         description: 'npm token'
         required: false
