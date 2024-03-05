@@ -16,6 +16,12 @@ on:
       - development
 
 jobs:
+  test:
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.0
+    secrets:
+      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
+      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
+
   dockerize_deploy:
     strategy:
       fail-fast: false
@@ -30,7 +36,7 @@ jobs:
             type: "deployment"
             deployment_tool: "kubectl" #deployment tool to use for deploying the application either helm or kubectl
 
-    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.2.9
+    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.0
     with:
       APP_NAME: ${{ matrix.app_name }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
@@ -62,7 +68,7 @@ jobs:
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
             deployment_tool: "kubectl" #deployment tool to use for deploying the application either helm or kubectl
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.2.9
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.0
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
