@@ -76,6 +76,12 @@ on:
       NPM_TOKEN:
         description: 'npm token'
         required: false
+      GH_USERNAME:
+        description: 'required input'
+        required: true
+      GH_PASSWORD:
+        description: 'required input'
+        required: true
 
 jobs:
   build_dockerize:
