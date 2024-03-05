@@ -42,10 +42,6 @@ on:
         description: 'path of docker file'
         required: true
         type: string
-      BUILD_COMMAND:
-        description: 'go build command'
-        required: true
-        type: string
       BUILD_ARGUMENTS:
         description: 'build arguments for DockerFile'
         required: false

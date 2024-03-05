@@ -22,7 +22,6 @@ jobs:
       matrix:
         include:
           - app_name: "training-api"
-            build_commands: "<build command>"
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
             DOCKER_FILE_PATH: "Dockerfile" #path of dockerfile including the name of the file
@@ -34,7 +33,6 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.2.9
     with:
       APP_NAME: ${{ matrix.app_name }}
-      BUILD_COMMAND: ${{ matrix.build_commands }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
