@@ -134,7 +134,7 @@ jobs:
         id: output-sha
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
         run: |
-          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
+          if [ "${{ github.event_name }}" == 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
             sha=$(git rev-parse HEAD)
           else
             sha="${{ github.sha }}"

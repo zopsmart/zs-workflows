@@ -74,6 +74,7 @@ jobs:
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       TYPE: ${{ matrix.type }}
+      SHA: ${{ needs.test.outputs.SHA }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
       PAT: ${{ secrets.STAGE_PAT }} #not a mandatory field, use PAT if using helm as deployment tool

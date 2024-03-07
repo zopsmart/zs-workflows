@@ -6,6 +6,17 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
+      NODE_VERSION:
+        description: 'node version'
+        type: string
+        required: true
+      SHA:
+        type: string
+        required: true
+      DEPENDENCIES_FLAG:
+        required: false
+        type: string
+        default: ""
       TYPE:
         type: string
         description: "deployment or cron"
@@ -131,24 +142,17 @@ jobs:
           echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      - uses: actions/setup-node@v3
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
       - name: installing dependencies and zipping node modules
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
           npm install ${{ inputs.DEPENDENCIES_FLAG }}
-
-      - name: Latest Commit Hash
-        id: output-sha
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
-        run: |
-          if [ "push" = 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
-            sha=$(git rev-parse HEAD)
-          else
-            sha="${{ github.sha }}"
-          fi
-          echo "$sha"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Build
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
@@ -170,14 +174,14 @@ jobs:
           push: true
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}
-          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.output-sha.outputs.sha }}
+          tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
           build-args: |
             NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-image
-        if: ${{ (github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
-        run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.output-sha.outputs.sha }}`" >> "$GITHUB_OUTPUT"
+        if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   stage_deployment:
     runs-on: ubuntu-latest

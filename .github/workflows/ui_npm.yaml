@@ -1,6 +1,10 @@
 name: 🧪 Test, 🔨 Build, and 🐳 Dockerize
 on:
   workflow_call:
+    outputs:
+      SHA:
+        description: "commit sha for image"
+        value: ${{ jobs.test.outputs.sha }}
     secrets:
       PAT:
         description: 'github token'
@@ -53,8 +57,6 @@ jobs:
     name: 🧪 Test, 🔨 Build and 🐳 Dockerize
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
-      only_configmap: ${{ steps.vars.outputs.only_configmap }}
-      only_deployment: ${{ steps.vars.outputs.only_deployment }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -102,3 +104,15 @@ jobs:
         with:
           github_token: ${{ secrets.PAT}}
           branch: ${{github.ref}}
+
+      - name: Latest Commit Hash
+        id: output-sha
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
+        run: |
+          if [ "${{ github.event_name }}" == 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
+            sha=$(git rev-parse HEAD)
+          else
+            sha="${{ github.sha }}"
+          fi
+          echo "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
