@@ -50,6 +50,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/npm_stage_deploy.yaml@v0.3.0
     with:
       APP_NAME: ${{ matrix.app_name }}
+      NODE_VERSION: '18.x'
       BUILD_COMMAND: ${{ matrix.build_commands }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
