@@ -20,6 +20,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/go.yaml@v0.2.9
     with:
       POSTMAN_ENABLED: false
+      GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
       TESTCOVERAGE_THRESHOLD: 10
       APP_NAME: ${{ vars.STAGE_APP_NAME }} #postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json
       ADD_SCHEMA: "true or false, if true must provide schema command"
@@ -61,6 +62,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/go_stage_deploy.yaml@v0.2.9
     with:
       APP_NAME: ${{ matrix.app_name }}
+      GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
       BUILD_COMMAND: ${{ matrix.build_commands }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       HELM_VALUES_PATH: ./helm-values/stage.yaml #not a mandatory field, use HELM_VALUES_PATH if deployment tool is helm

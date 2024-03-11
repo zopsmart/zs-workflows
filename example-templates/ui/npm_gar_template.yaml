@@ -93,7 +93,6 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       HELM_VALUES_PATH: ./helm-values/prod.yaml
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
-      IMAGE: ${{ needs.test.outputs.image }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service

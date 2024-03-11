@@ -10,6 +10,11 @@ on:
         type: string
         description: "deployment or cron"
         required: true
+      GO_VERSION:
+        description: 'go version'
+        required: false
+        type: string
+        default: '1.20'
       SHA:
         type: string
         required: true
@@ -130,6 +135,9 @@ jobs:
           echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '${{ inputs.GO_VERSION }}'
 
       - name: Get dependencies
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
