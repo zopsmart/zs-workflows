@@ -169,7 +169,7 @@ jobs:
         with:
           push: true
           context: .
-          file: ${{ inputs.DOCKER_FILE_PATH }}/Dockerfile
+          file: ${{ inputs.DOCKER_FILE_PATH }}
           tags: ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ steps.output-sha.outputs.sha }}
           build-args: |
             ${{ inputs.BUILD_ARGUMENTS }}
