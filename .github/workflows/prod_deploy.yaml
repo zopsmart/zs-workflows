@@ -75,7 +75,7 @@ jobs:
           helm repo add helm \
             --username "${{ github.actor }}" \
             --password "${{ secrets.PAT }}" \
-            "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
+            "https://raw.githubusercontent.com/zopsmart/helm/v0.2.3/charts"
 
       - name: Check if image tag exists
         if: ${{ startsWith(github.ref, 'refs/tags/v')}}
