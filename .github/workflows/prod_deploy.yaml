@@ -85,6 +85,7 @@ jobs:
               echo "tag_exists=true" >> "$GITHUB_OUTPUT"
           else
               echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+              echo "Image does not exist with the tag ${{ github.sha }}"
           fi
 
       - name: Extract Release Tag
