@@ -72,10 +72,7 @@ jobs:
       - name: Add Helm Repo
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
         run: |
-          helm repo add helm \
-            --username "${{ github.actor }}" \
-            --password "${{ secrets.PAT }}" \
-            "https://raw.githubusercontent.com/zopsmart/helm/v0.2.3/charts"
+          helm repo add kops-dev https://kops-dev.github.io/helm
 
       - name: Check if image tag exists
         if: ${{ startsWith(github.ref, 'refs/tags/v')}}
@@ -116,7 +113,7 @@ jobs:
 
       - name: Update Deployment Image using Helm
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' && steps.tag-check.outputs.tag_exists == 'true' }}
-        run: helm upgrade --install --set image=${{ steps.prod-image.outputs.image }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.9
+        run: helm upgrade --install --set image=${{ steps.prod-image.outputs.image }} ${{ inputs.APP_NAME }} kops-dev/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.2.8
 
       - name: Update Deployment Image using Kubectl
         if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' && steps.tag-check.outputs.tag_exists == 'true' }}
