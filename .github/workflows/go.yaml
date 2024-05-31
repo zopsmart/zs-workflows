@@ -223,13 +223,6 @@ jobs:
           git config --global --add safe.directory /__w/$(basename ${{ github.repository }})/$(basename ${{ github.repository }})
           git diff --quiet --exit-code README.md || git commit README.md -m "Update coverage in README.md"
 
-      - name: Push Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ github.token }}
-          branch: ${{github.ref}}
-
       - name: Coverage Quality Gate
         run: |
           echo "Quality Gate: checking test coverage is above threshold ..."
@@ -246,6 +239,7 @@ jobs:
           fi
           
       - name: Count nolint occurrences
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         id: count_nolint
         run: |
           nolint_count=$(grep -r -E '//\s*nolint' . | wc -l)
@@ -253,6 +247,7 @@ jobs:
           echo "nolint_count=$nolint_count" >> "$GITHUB_OUTPUT"
 
       - name: Generate nolint count badge URL
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         id: generate_badge
         run: |
           nolint_count=${{ steps.count_nolint.outputs.nolint_count }}
@@ -261,6 +256,7 @@ jobs:
           echo $badge_url > badge_url.txt
 
       - name: Update README with nolint count badge URL
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           existing_badge=""
           if grep -qP '\!\[nolint count\]\(\K[^)]+' README.md; then
@@ -282,11 +278,18 @@ jobs:
           fi
 
       - name: Commit and push changes
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub-Action"
           git diff --quiet --exit-code README.md || git commit README.md -m "Update nolint count badge in README.md"
-          git push
+
+      - name: Push Coverage and nolint Badge
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{github.ref}}
 
       - name: Latest Commit Hash
         id: output-sha
