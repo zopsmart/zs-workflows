@@ -221,14 +221,7 @@ jobs:
           gobadge -filename=temp/c.out -target=$(pwd)/README.md
           git config --global user.email "action@github.com" && git config --global user.name "GitHub-Action"
           git config --global --add safe.directory /__w/$(basename ${{ github.repository }})/$(basename ${{ github.repository }})
-          git diff --quiet --exit-code README.md || git commit README.md -m "updating coverage in README.md"
-
-      - name: Push Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ github.token }}
-          branch: ${{github.ref}}
+          git diff --quiet --exit-code README.md || git commit README.md -m "Update coverage in README.md"
 
       - name: Coverage Quality Gate
         run: |
@@ -244,6 +237,59 @@ jobs:
               echo "Failed"
               exit 1
           fi
+          
+      - name: Count nolint occurrences
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        id: count_nolint
+        run: |
+          nolint_count=$(grep -r -E '//\s*nolint' . | wc -l)
+          echo "Number of nolint occurrences: $nolint_count"
+          echo "nolint_count=$nolint_count" >> "$GITHUB_OUTPUT"
+
+      - name: Generate nolint count badge URL
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        id: generate_badge
+        run: |
+          nolint_count=${{ steps.count_nolint.outputs.nolint_count }}
+          badge_url="https://img.shields.io/badge/nolint_count-${nolint_count}-orange"
+          echo "badge_url=$badge_url" >> "$GITHUB_OUTPUT"
+          echo $badge_url > badge_url.txt
+
+      - name: Update README with nolint count badge URL
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          existing_badge=""
+          if grep -qP '\!\[nolint count\]\(\K[^)]+' README.md; then
+            existing_badge=$(grep -oP '\!\[nolint count\]\(\K[^)]+' README.md)
+            count=$(echo $existing_badge | grep -oP 'nolint_count-\K\d+')
+          fi
+          new_badge_url=${{ steps.generate_badge.outputs.badge_url }}
+          echo "$existing_badge"
+          echo "$new_badge_url"
+          echo "$count"
+          if [ -z "$existing_badge" ]; then
+            echo "![nolint count]($(<badge_url.txt))" >> README.md
+            echo "Badge added to README.md"
+          elif [ "${{ steps.count_nolint.outputs.nolint_count }}" != "$count" ]; then
+            sed -i "s|\!\[nolint count\]($existing_badge)|\!\[nolint count\]($new_badge_url)|g" README.md
+            echo "Badge updated in README.md"
+          else
+            echo "Count is up-to-date"
+          fi
+
+      - name: Commit and push changes
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub-Action"
+          git diff --quiet --exit-code README.md || git commit README.md -m "Update nolint count badge in README.md"
+
+      - name: Push Coverage and nolint Badge
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ github.token }}
+          branch: ${{github.ref}}
 
       - name: Latest Commit Hash
         id: output-sha
