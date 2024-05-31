@@ -10,10 +10,6 @@ on:
         type: string
         description: "deployment or cron"
         required: true
-      DEPLOYMENT_TOOL:
-        type: string
-        description: "kubectl or helm"
-        required: true
       IMAGE_REGISTRY:
         type: string
         required: true
@@ -69,11 +65,6 @@ jobs:
         with:
           credentials_json: ${{ secrets.GAR_KEY }}
 
-      - name: Add Helm Repo
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
-        run: |
-          helm repo add kops-dev https://kops-dev.github.io/helm
-
       - name: Check if image tag exists
         if: ${{ startsWith(github.ref, 'refs/tags/v')}}
         id: tag-check
@@ -111,16 +102,12 @@ jobs:
         if: ${{ steps.tag-check.outputs.tag_exists == 'true' }}
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
-      - name: Update Deployment Image using Helm
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' && steps.tag-check.outputs.tag_exists == 'true' }}
-        run: helm upgrade --install --set image=${{ steps.prod-image.outputs.image }} ${{ inputs.APP_NAME }} kops-dev/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.2.8
-
       - name: Update Deployment Image using Kubectl
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' && steps.tag-check.outputs.tag_exists == 'true' }}
+        if: ${{ inputs.TYPE == 'deployment' && steps.tag-check.outputs.tag_exists == 'true' }}
         run: kubectl set image deployment/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ steps.prod-image.outputs.image }} --namespace ${{ inputs.NAMESPACE }}
 
       - name: Update Cron Image
-        if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'cron' && steps.tag-check.outputs.tag_exists == 'true' }}
+        if: ${{ inputs.TYPE == 'cron' && steps.tag-check.outputs.tag_exists == 'true' }}
         run: kubectl set image cronjobs/${{ inputs.APP_NAME }} ${{ inputs.APP_NAME }}=${{ steps.prod-image.outputs.image }} --namespace ${{ inputs.NAMESPACE }}
 
       - name: Set App Version
