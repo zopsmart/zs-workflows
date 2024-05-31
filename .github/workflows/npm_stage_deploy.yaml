@@ -205,17 +205,14 @@ jobs:
       - name: Add Helm Repo
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' }}
         run: |
-          helm repo add helm \
-            --username "${{ github.actor }}" \
-            --password "${{ secrets.PAT }}" \
-            "https://raw.githubusercontent.com/zopsmart/helm/v0.2.3/charts"
+          helm repo add kops-dev https://kops-dev.github.io/helm
 
       - name: Set GCloud Project and Fetch Cluster Credentials
         run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
 
       - name: Update Deployment Image using Helm
         if: ${{ inputs.DEPLOYMENT_TOOL == 'helm' && inputs.TYPE == 'deployment' }}
-        run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.STAGE_NAMESPACE }} --version v0.1.9
+        run: helm upgrade --install --set image=${{ env.image }} ${{ inputs.APP_NAME }} kops-dev/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.STAGE_NAMESPACE }} --version v0.2.8
 
       - name: Update Deployment Image using Kubectl
         if: ${{ inputs.DEPLOYMENT_TOOL == 'kubectl' && inputs.TYPE == 'deployment' }}
@@ -278,6 +275,7 @@ jobs:
   update_configmap:
     runs-on: ubuntu-latest
     name: Update Only Configmap
+    needs: build_dockerize
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
       options: --rm
