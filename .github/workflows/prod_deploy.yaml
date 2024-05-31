@@ -42,9 +42,6 @@ on:
         required: false
         default: false
     secrets:
-      PAT:
-        description: 'pat for helm'
-        required: false
       GAR_KEY:
         description: 'gar key'
         required: true
