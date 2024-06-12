@@ -42,7 +42,6 @@ jobs:
             stage_namespace: ${{ vars.STAGE_NAMESPACE }}
             prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
 
@@ -63,7 +62,6 @@ jobs:
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       TYPE: ${{ matrix.type }}
       SHA: ${{ needs.test.outputs.SHA }}
-      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
 
     secrets:
@@ -80,7 +78,6 @@ jobs:
             namespace: ${{ vars.PROD_NAMESPACE }}
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
     uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.0
     with:
       APP_NAME: ${{ matrix.app_name }}
@@ -92,8 +89,6 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
-      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
     secrets:
-      PAT: ${{ secrets.PROD_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
       GAR_KEY: ${{ secrets.STAGE_DEPLOY_KEY }}

@@ -82,6 +82,5 @@ jobs:
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
 
     secrets:
-      PAT: ${{ secrets.PAT }} #not a mandatory field, use PAT if using helm as deployment tool
       GAR_KEY: ${{ secrets.GAR_KEY }}
 

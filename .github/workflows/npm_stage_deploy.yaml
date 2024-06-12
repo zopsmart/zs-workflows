@@ -33,9 +33,6 @@ on:
       PROD_NAMESPACE:
         type: string
         required: true
-      HELM_VALUES_PATH:
-        type: string
-        required: false
       IMAGE_REGISTRY:
         type: string
         required: true

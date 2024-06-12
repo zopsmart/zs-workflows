@@ -67,7 +67,6 @@ jobs:
       GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
       BUILD_COMMAND: ${{ matrix.build_commands }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
-      HELM_VALUES_PATH: ./helm-values/stage.yaml #not a mandatory field, use HELM_VALUES_PATH if deployment tool is helm
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
       STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
@@ -80,7 +79,7 @@ jobs:
       TYPE: ${{ matrix.type }}
       SHA: ${{ needs.test.outputs.SHA }}
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
+      PAT: ${{ secrets.STAGE_PAT }}
       GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
 
   prod_deployment:
@@ -101,7 +100,6 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
-      HELM_VALUES_PATH: ./helm-values/prod.yaml #not a mandatory field, use HELM_VALUES_PATH if deployment tool is helm
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
     secrets:

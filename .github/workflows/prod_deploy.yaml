@@ -28,9 +28,6 @@ on:
       NAMESPACE:
         type: string
         required: true
-      HELM_VALUES_PATH:
-        type: string
-        required: false
       ENV_FILE_PATH:
         description: 'env file path'
         required: false
