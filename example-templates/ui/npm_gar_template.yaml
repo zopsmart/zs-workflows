@@ -65,7 +65,7 @@ jobs:
       SHA: ${{ needs.test.outputs.SHA }}
       REACT_APP:  # true if its react service, default is false skip this if not a react service
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
+      PAT: ${{ secrets.STAGE_PAT }}
       NPM_TOKEN: ${{ secrets.PRIVATE_GITHUB_PACKAGE_PAT }} #not required
       GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
 

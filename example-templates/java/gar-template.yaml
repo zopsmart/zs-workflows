@@ -53,7 +53,7 @@ jobs:
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
 
     secrets:
-      PAT: ${{ secrets.PAT }}  #not a mandatory field, use PAT if using helm as deployment tool
+      PAT: ${{ secrets.PAT }} 
       GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
       GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
       GAR_KEY: ${{ secrets.GAR_KEY }}
