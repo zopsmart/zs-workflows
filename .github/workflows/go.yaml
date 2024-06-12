@@ -80,6 +80,10 @@ on:
         required: false
         type: boolean
         default: false
+      MODULES:
+        description: 'list of modules to run test cases'
+        required: false
+        type: string
 
     secrets:
       PAT:
@@ -189,6 +193,8 @@ jobs:
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+          go install go.shabbyrobe.org/gocovmerge/cmd/gocovmerge@latest
+          go install github.com/AlexBeauchemin/gobadge@latest
 
       - name: Extra dependencies
         if: ${{ inputs.EXTRA_DEPENDENCIES }}
@@ -207,7 +213,21 @@ jobs:
       - name: Test
         run: |
           mkdir -p temp/build
-          GOFR_ENV=test go test ./... -count=1 -v -coverprofile temp/cover.out -coverpkg=./...
+          GOFR_ENV=test go test ./... -count=1 -v -coverprofile temp/cover1.out -coverpkg=./...
+          modules="${{ inputs.MODULES }}"
+          modules=$(echo "$modules" | xargs)
+          modules=$(echo "$modules" | tr -d '\r')
+          echo "$modules"
+          counter=2
+          for module in $modules; do
+            echo "Processing module: $module"
+            cd $module
+            GOFR_ENV=test go test ./... -count=1 -v -coverprofile ../temp/cover${counter}.out -coverpkg=./...
+            cd ..
+            counter=$((counter + 1))
+          done
+          coverfiles=$(ls temp/cover*.out)
+          gocovmerge $coverfiles > temp/cover.out
           cat temp/cover.out | grep -v "mock_interface" | grep -v "migrations" > temp/coverage.out
 
       - name: Test Coverage report

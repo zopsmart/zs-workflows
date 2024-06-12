@@ -22,6 +22,9 @@ jobs:
       POSTMAN_ENABLED: false
       GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
       TESTCOVERAGE_THRESHOLD: 10
+      MODULES: |
+        module1
+        module2   // Give the list of modules(with their own go mod files) whose test coverage you want to include in the coverage badge
       APP_NAME: ${{ vars.STAGE_APP_NAME }} #postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json
       ADD_SCHEMA: "true or false, if true must provide schema command"
       SCHEMA_COMMAND: "command to load schema to database,
@@ -56,7 +59,6 @@ jobs:
             stage_namespace: ${{ vars.STAGE_NAMESPACE }}
             prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
     uses: zopsmart/zs-workflows/.github/workflows/go_stage_deploy.yaml@v0.3.0
@@ -65,7 +67,6 @@ jobs:
       GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
       BUILD_COMMAND: ${{ matrix.build_commands }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
-      HELM_VALUES_PATH: ./helm-values/stage.yaml #not a mandatory field, use HELM_VALUES_PATH if deployment tool is helm
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
       STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
@@ -77,9 +78,8 @@ jobs:
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       TYPE: ${{ matrix.type }}
       SHA: ${{ needs.test.outputs.SHA }}
-      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
-      PAT: ${{ secrets.STAGE_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
+      PAT: ${{ secrets.STAGE_PAT }}
       GAR_KEY: ${{ secrets.STAGE_GAR_KEY }}
 
   prod_deployment:
@@ -91,7 +91,6 @@ jobs:
             namespace: ${{ vars.PROD_NAMESPACE }}
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-            deployment_tool: "helm" #deployment tool to use for deploying the application either helm or kubectl
     uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.0
     with:
       APP_NAME: ${{ matrix.app_name }}
@@ -101,10 +100,7 @@ jobs:
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       NAMESPACE: ${{ matrix.namespace }}
-      HELM_VALUES_PATH: ./helm-values/prod.yaml #not a mandatory field, use HELM_VALUES_PATH if deployment tool is helm
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
-      DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}
     secrets:
-      PAT: ${{ secrets.PROD_PAT }} #not a mandatory field, use PAT if using helm as deployment tool
       GAR_KEY: ${{ secrets.PROD_GAR_KEY }}
