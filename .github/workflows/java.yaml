@@ -18,6 +18,13 @@ jobs:
           java-version: 11.0.10
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Login to GAR which has rocket dependencies
+        uses: docker/login-action@v2
+        with:
+          registry: us-central1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GAR_SECRET }}
       - name: Setting Project ID as env
         run: |
           echo '${{ secrets.GAR_SECRET }}' > credentials.json
