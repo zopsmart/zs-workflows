@@ -62,11 +62,7 @@ on:
       GAR_KEY:
         description: 'gar key'
         required: true
-<<<<<<< HEAD
-      GAR_PUBLISH_KEY:
-=======
       GAR_SECRET:
->>>>>>> e16916e7d2502014169e7d8954aae8fe47892f24
         description: 'required input'
         required: true
 
