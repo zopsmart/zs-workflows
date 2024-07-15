@@ -19,9 +19,8 @@ jobs:
   test:
     uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.0
     secrets:
-      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
-      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
-
+      GAR_SECRET: ${{ secrets.GAR_KEY }}
+      
   dockerize_deploy:
     strategy:
       fail-fast: false
@@ -54,8 +53,7 @@ jobs:
 
     secrets:
       PAT: ${{ secrets.PAT }} 
-      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
-      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
+      GAR_SECRET: ${{ secrets.GAR_KEY }}
       GAR_KEY: ${{ secrets.GAR_KEY }}
 
   prod_deployment:

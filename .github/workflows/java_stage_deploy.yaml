@@ -62,7 +62,7 @@ on:
       GAR_KEY:
         description: 'gar key'
         required: true
-      GAR_PUBLISH_KEY:
+      GAR_SECRET:
         description: 'required input'
         required: true
 
@@ -140,7 +140,7 @@ jobs:
 
       - name: Setting Project ID as env
         run: |
-          echo '${{ secrets.GAR_PUBLISH_KEY }}' > credentials.json
+          echo '${{ secrets.GAR_SECRET }}' > credentials.json
           PROJECT_ID=$(jq -r '.project_id' credentials.json)
           echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
           
