@@ -144,12 +144,10 @@ jobs:
           PROJECT_ID=$(jq -r '.project_id' credentials.json)
           echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
       
-      - name: Login to GAR with rocket dependencies
-        uses: docker/login-action@v2
+      - name: Authorize to GCP service account to pull rocket packages from GAR
+        uses: google-github-actions/auth@v1
         with:
-          registry: us-central1-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.GAR_SECRET }}
+          credentials_json: ${{ secrets.GAR_SECRET }}
 
       - name: Build Gradle from GAR
         run: ./gradlew clean build
