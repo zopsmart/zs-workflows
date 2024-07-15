@@ -18,7 +18,7 @@ on:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_npm.yaml@v0.3.0
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm.yaml@v0.3.3
     with:
       APP_NAME: ${{ matrix.app_name }}
       NODE_VERSION: '18.x'
@@ -46,7 +46,7 @@ jobs:
             stage_env_file_path: "path of env file to store them in configmap of stage namespace"
             prod_env_file_path: "path of env file to store them in configmap of prod namespace"
 
-    uses: zopsmart/zs-workflows/.github/workflows/npm_stage_deploy.yaml@v0.3.0
+    uses: zopsmart/zs-workflows/.github/workflows/npm_stage_deploy.yaml@v0.3.3
     with:
       APP_NAME: ${{ matrix.app_name }}
       NODE_VERSION: '18.x'
@@ -78,7 +78,7 @@ jobs:
             namespace: ${{ vars.PROD_NAMESPACE }}
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.0
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.3
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
