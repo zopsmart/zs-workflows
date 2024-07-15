@@ -2,11 +2,7 @@ name: "checkout and build"
 on:
   workflow_call:
     secrets:
-      GH_USERNAME:
-        description: 'required input'
-        required: true
-
-      GH_PASSWORD:
+      GAR_PUBLISH_KEY:
         description: 'required input'
         required: true
 
@@ -22,8 +18,12 @@ jobs:
           java-version: 11.0.10
       - name: Check out code
         uses: actions/checkout@v4
-      - name: Build with Gradle
+      - name: Setting Project ID as env
+        run: |
+          echo '${{ secrets.GAR_PUBLISH_KEY }}' > credentials.json
+          PROJECT_ID=$(jq -r '.project_id' credentials.json)
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+      - name: Build Gradle from GAR
         run: ./gradlew clean build
         env:
-          GH_USERNAME: ${{ secrets.GH_USERNAME }}
-          GH_PASSWORD: ${{ secrets.GH_PASSWORD }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
