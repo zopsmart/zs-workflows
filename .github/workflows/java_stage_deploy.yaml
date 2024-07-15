@@ -62,7 +62,11 @@ on:
       GAR_KEY:
         description: 'gar key'
         required: true
+<<<<<<< HEAD
       GAR_PUBLISH_KEY:
+=======
+      GAR_SECRET:
+>>>>>>> e16916e7d2502014169e7d8954aae8fe47892f24
         description: 'required input'
         required: true
 
@@ -140,10 +144,17 @@ jobs:
 
       - name: Setting Project ID as env
         run: |
-          echo '${{ secrets.GAR_PUBLISH_KEY }}' > credentials.json
+          echo '${{ secrets.GAR_SECRET }}' > credentials.json
           PROJECT_ID=$(jq -r '.project_id' credentials.json)
           echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          
+      
+      - name: Login to GAR with rocket dependencies
+        uses: docker/login-action@v2
+        with:
+          registry: us-central1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GAR_SECRET }}
+
       - name: Build Gradle from GAR
         run: ./gradlew clean build
         env:
