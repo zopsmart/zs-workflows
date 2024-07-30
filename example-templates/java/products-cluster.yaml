@@ -19,8 +19,7 @@ jobs:
   build:
     uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@main
     secrets:
-      GH_PASSWORD: ${{ secrets.GH_PACKAGE_PASS }}
-      GH_USERNAME: ${{ secrets.GH_PACKAGE_USER }}
+      GAR_SECRET: ${{ secrets.GAR_KEY }}
 
   stage_deployment:
     needs: [ build ]

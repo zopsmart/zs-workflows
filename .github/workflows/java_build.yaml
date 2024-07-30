@@ -2,11 +2,7 @@ name: "checkout and build"
 on:
   workflow_call:
     secrets:
-      GH_USERNAME:
-        description: 'required input'
-        required: true
-
-      GH_PASSWORD:
+      GAR_SECRET:
         description: 'required input'
         required: true
 
@@ -22,11 +18,22 @@ jobs:
           java-version: 11.0.10
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Setting Project ID as env
+        run: |
+          echo '${{ secrets.GAR_SECRET }}' > credentials.json
+          PROJECT_ID=$(jq -r '.project_id' credentials.json)
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
+      - name: Authorize to GCP service account to pull rocket packages from GAR
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_SECRET }}
+
       - name: Build with Gradle
         run: ./gradlew clean build
         env:
-          GH_USERNAME: ${{ secrets.GH_USERNAME }}
-          GH_PASSWORD: ${{ secrets.GH_PASSWORD }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
