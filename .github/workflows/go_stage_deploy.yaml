@@ -6,6 +6,15 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
+      EXTRA_DEPENDENCIES:
+        description: 'enable step to install extra dependencies'
+        required: false
+        type: boolean
+        default: false
+      DEPENDENCIES_COMMAND:
+        description: 'commands to install extra dependencies'
+        required: false
+        type: string
       TYPE:
         type: string
         description: "deployment or cron"
@@ -138,6 +147,11 @@ jobs:
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
           go mod download
+
+      - name: Extra dependencies
+        if: ${{ inputs.EXTRA_DEPENDENCIES }}
+        run: |
+          ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: Make Directory
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
