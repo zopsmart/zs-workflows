@@ -263,12 +263,11 @@ jobs:
   update_configmap:
     runs-on: ubuntu-latest
     name: Update Only Configmap
-    if: inputs.CLUSTER_NAME != ''
     needs: build_dockerize
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
       options: --rm
-    if: ${{ needs.build_dockerize.outputs.configmap == 'true' && needs.build_dockerize.outputs.deployment != 'true' }}
+    if: ${{ inputs.CLUSTER_NAME != '' && needs.build_dockerize.outputs.configmap == 'true' && needs.build_dockerize.outputs.deployment != 'true' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
