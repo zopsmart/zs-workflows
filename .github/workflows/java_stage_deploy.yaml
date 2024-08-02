@@ -15,6 +15,10 @@ on:
         required: true
       CLUSTER_NAME:
         type: string
+        required: false
+        default: ''
+      CLUSTER_REGION:
+        type: string
         required: true
       STAGE_NAMESPACE:
         type: string
@@ -180,7 +184,7 @@ jobs:
   stage_deployment:
     runs-on: ubuntu-latest
     needs: [ build_dockerize ]
-    if: ${{ (github.ref == 'refs/heads/development') && needs.build_dockerize.outputs.deployment == 'true' }}
+    if: ${{ inputs.CLUSTER_NAME != '' && (github.ref == 'refs/heads/development') && needs.build_dockerize.outputs.deployment == 'true' }}
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
       options: --rm
@@ -197,7 +201,7 @@ jobs:
           credentials_json: ${{ secrets.GAR_KEY }}
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=${{ inputs.CLUSTER_REGION }} --project=${{ inputs.CLUSTER_PROJECT }}
 
       - name: Update Deployment Image using Kubectl
         if: ${{ inputs.TYPE == 'deployment' }}
@@ -260,6 +264,7 @@ jobs:
   update_configmap:
     runs-on: ubuntu-latest
     name: Update Only Configmap
+    if: inputs.CLUSTER_NAME != ''
     needs: build_dockerize
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
@@ -275,7 +280,7 @@ jobs:
           credentials_json: ${{ secrets.GAR_KEY }}
 
       - name: Set GCloud Project and Fetch Cluster Credentials
-        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=${{ inputs.CLUSTER_REGION }} --project=${{ inputs.CLUSTER_PROJECT }}
 
       - name: Read ENV Files
         run: |

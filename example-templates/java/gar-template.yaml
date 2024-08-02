@@ -43,8 +43,9 @@ jobs:
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
       STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
       PROD_NAMESPACE: ${{ matrix.prod_namespace }}
-      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
+      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }} // Skip this input, if only dockerize is needed
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
+      CLUSTER_REGION: cluster region
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
@@ -75,6 +76,7 @@ jobs:
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
+      CLUSTER_REGION: cluster region
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
       DEPLOYMENT_TOOL: ${{ matrix.deployment_tool }}

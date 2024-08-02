@@ -25,6 +25,9 @@ on:
       CLUSTER_NAME:
         type: string
         required: true
+      CLUSTER_REGION:
+        type: string
+        required: true
       NAMESPACE:
         type: string
         required: true
@@ -94,7 +97,7 @@ jobs:
 
       - name: Set GCloud Project and Fetch Cluster Credentials
         if: ${{ steps.tag-check.outputs.tag_exists == 'true' }}
-        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=us-central1 --project=${{ inputs.CLUSTER_PROJECT }}
+        run: gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} --region=${{ inputs.CLUSTER_REGION }} --project=${{ inputs.CLUSTER_PROJECT }}
 
       - name: Update Deployment Image using Kubectl
         if: ${{ inputs.TYPE == 'deployment' && steps.tag-check.outputs.tag_exists == 'true' }}

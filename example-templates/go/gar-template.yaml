@@ -54,6 +54,7 @@ jobs:
       matrix:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
+            artifact_path: "based on build command" // use same binary name used in build command
             build_commands: "<build command>"
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             stage_namespace: ${{ vars.STAGE_NAMESPACE }}
@@ -64,6 +65,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/go_stage_deploy.yaml@v0.3.3
     with:
       APP_NAME: ${{ matrix.app_name }}
+      ARTIFACT_PATH: ${{ matrix.artifact_path }}
       EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
       DEPENDENCIES_COMMAND: |
         "commands to install dependencies"
@@ -76,7 +78,8 @@ jobs:
       STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
       PROD_NAMESPACE: ${{ matrix.prod_namespace }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
-      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
+      CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}  // Skip this input, if only dockerize is needed
+      CLUSTER_REGION: cluster region
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
@@ -103,6 +106,7 @@ jobs:
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_PROJECT: ${{ vars.PROD_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
+      CLUSTER_REGION: cluster region
       NAMESPACE: ${{ matrix.namespace }}
       ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
