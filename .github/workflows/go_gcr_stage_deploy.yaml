@@ -131,7 +131,7 @@ jobs:
           ${{ inputs.BUILD_COMMAND }}
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.APP_NAME }}
           path: ${{ inputs.DOCKER_FILE_PATH }}/${{ inputs.ARTIFACT_PATH }}
@@ -148,7 +148,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.APP_NAME }}
 

@@ -35,7 +35,7 @@ jobs:
         env:
           PROJECT_ID: ${{ env.PROJECT_ID }}
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: artifacts
           path: build/libs
