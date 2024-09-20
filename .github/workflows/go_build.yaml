@@ -41,9 +41,10 @@ on:
         default: ''
 
       SERVER_COMMAND:
-        description: 'commands to setup before running postman server'
+        description: 'commands to setup before running server for postman'
         required: false
         type: string
+        default: ""
 
       MYSQL_ENABLE:
         required: false
@@ -267,7 +268,9 @@ jobs:
       - name: Run Server
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
-          ${{ inputs.SERVER_COMMAND }}
+          if [ "${{ inputs.SERVER_COMMAND }}" != "" ]; then
+            ${{ inputs.SERVER_COMMAND }}
+          fi
           GOFR_ENV=test go run main.go &
           sleep 30
 
