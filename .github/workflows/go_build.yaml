@@ -38,6 +38,7 @@ on:
         description: 'commands to install extra dependencies'
         required: false
         type: string
+        default: ''
 
       SERVER_COMMAND:
         description: 'commands to setup before running postman server'

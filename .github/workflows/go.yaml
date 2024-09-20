@@ -44,6 +44,7 @@ on:
         description: 'commands to setup before running postman server'
         required: false
         type: string
+        default: ''
       MYSQL_ENABLE:
         required: false
         type: boolean
