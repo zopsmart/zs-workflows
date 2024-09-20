@@ -40,6 +40,10 @@ on:
         description: 'commands to install extra dependencies'
         required: false
         type: string
+      SERVER_COMMAND:
+        description: 'commands to setup before running postman server'
+        required: false
+        type: string
       MYSQL_ENABLE:
         required: false
         type: boolean
@@ -332,6 +336,7 @@ jobs:
       - name: Install newman and Run Postman Collection
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
+          ${{ inputs.SERVER_COMMAND }}
           npm install -g newman
           newman run postman-collections/${{ inputs.APP_NAME }}.postman-collection.json
 

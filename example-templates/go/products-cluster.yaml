@@ -30,6 +30,8 @@ jobs:
       DEPENDENCIES_COMMAND: |
         "commands to install dependencies"
         ""
+      SERVER_COMMAND: |
+        "commands to execute before running postman server"
       MYSQL_ENABLE: "to enable MYSQL service"
       POSTGRES_ENABLE: "to enable POSTGRES service"
       REDIS_ENABLE: "to enable REDIS service"
