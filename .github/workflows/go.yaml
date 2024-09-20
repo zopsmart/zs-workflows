@@ -332,7 +332,10 @@ jobs:
         if: ${{ inputs.POSTMAN_ENABLED }}
         run: |
           if [ "${{ inputs.SERVER_COMMAND }}" != "" ]; then
+            echo "Running commands"
             ${{ inputs.SERVER_COMMAND }}
+          else
+            echo "Starting server"
           fi
           GOFR_ENV=test go run main.go &
           sleep 30
