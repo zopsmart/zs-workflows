@@ -1,8 +1,8 @@
 name: Build and Deploy Service
 
 on:
-  pull_request:
-    types: [review_requested]
+  pull_request_review:
+    types: [ submitted ]
     branches:
       - main
       - master

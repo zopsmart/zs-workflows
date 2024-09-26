@@ -99,7 +99,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: 🧪 Test and Linters
-    if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master' || github.event_name == 'pull_request') && !startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master' || github.event.review.state == 'approved') && !startsWith(github.ref, 'refs/tags/v') }}
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
