@@ -17,7 +17,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@ui-gar-workflow
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@v0.3.4
     with:
       APP_NAME: ${{ vars.PROD_APP_NAME }}
       NODE_VERSION: '18.x'
@@ -47,7 +47,7 @@ jobs:
             app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
 
-    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@ui-gar-workflow
+    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@v0.3.4
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       BUILD_ARGUMENTS: |
@@ -77,7 +77,7 @@ jobs:
         include:
           - app_name: ${{ vars.PROD_APP_NAME }}
             namespace: ${{ vars.PROD_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@ui-gar-workflow
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@v0.3.4
     with:
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}

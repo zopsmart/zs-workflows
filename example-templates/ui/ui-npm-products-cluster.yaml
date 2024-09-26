@@ -11,7 +11,7 @@ name: Build and Deploy
       - development
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@v0.3.4
     with:
       APP_NAME: smart-quiz-admin-ui
       NODE_VERSION: '16.x'
@@ -45,7 +45,7 @@ jobs:
             app_name: smart-quiz-candidate-ui
             namespace: quizzing-pro-stage
             type: deployment
-    uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@v0.3.4
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       BUILD_ARGUMENTS: |
@@ -76,7 +76,7 @@ jobs:
             app_name: smart-quiz-candidate-ui
             namespace: quizzing-pro-stage
             type: deployment
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.4
     with:
       IMAGE_REGISTRY: gcr.io
       username: _json_key
