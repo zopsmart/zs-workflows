@@ -99,7 +99,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: 🧪 Test and Linters
-    if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master' || github.event.review.state == 'approved') && !startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.event.review.state == 'approved') && !startsWith(github.ref, 'refs/tags/v') }}
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
@@ -240,7 +240,7 @@ jobs:
           go tool cover -func=temp/coverage.out | tee temp/c.out
 
       - name: Generate and Commit Coverage Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main')
         run: |
           go install github.com/AlexBeauchemin/gobadge@latest
           gobadge -filename=temp/c.out -target=$(pwd)/README.md
@@ -264,7 +264,7 @@ jobs:
           fi
           
       - name: Count nolint occurrences
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main')
         id: count_nolint
         run: |
           nolint_count=$(grep -r -E '//\s*nolint' . | wc -l)
@@ -272,7 +272,7 @@ jobs:
           echo "nolint_count=$nolint_count" >> "$GITHUB_OUTPUT"
 
       - name: Generate nolint count badge URL
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main')
         id: generate_badge
         run: |
           nolint_count=${{ steps.count_nolint.outputs.nolint_count }}
@@ -281,7 +281,7 @@ jobs:
           echo $badge_url > badge_url.txt
 
       - name: Update README with nolint count badge URL
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main')
         run: |
           existing_badge=""
           if grep -qP '\!\[nolint count\]\(\K[^)]+' README.md; then
@@ -303,14 +303,14 @@ jobs:
           fi
 
       - name: Commit and push changes
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main')
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub-Action"
           git diff --quiet --exit-code README.md || git commit README.md -m "Update nolint count badge in README.md"
 
       - name: Push Coverage and nolint Badge
-        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: (github.event_name == 'push') && (github.ref == 'refs/heads/main')
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ github.token }}
@@ -318,9 +318,9 @@ jobs:
 
       - name: Latest Commit Hash
         id: output-sha
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
         run: |
-          if [ "${{ github.event_name }}" == 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) -o \( "${{ github.ref }}" = 'refs/heads/master' \) ]; then
+          if [ "${{ github.event_name }}" == 'push' ] && [ \( "${{ github.ref }}" = 'refs/heads/main' \) ]; then
             sha=$(git rev-parse HEAD)
           else
             sha="${{ github.sha }}"

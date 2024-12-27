@@ -74,7 +74,7 @@ jobs:
     outputs:
       image: ${{ steps.output-image.outputs.image }}
     name: 🐳 Dockerize - Stage
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

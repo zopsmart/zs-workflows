@@ -5,14 +5,12 @@ on:
     types: [ submitted ]
     branches:
       - main
-      - master
       - development
   push:
     tags:
       - '*'
     branches:
       - main
-      - master
       - development
 env:
 
@@ -21,7 +19,7 @@ env:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@v0.3.5
     with:
       TESTCOVERAGE_THRESHOLD: 90
       APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
@@ -72,7 +70,7 @@ jobs:
             DOCKER_FILE_PATH: "./script/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "script-name"
             namespace: "namespace-name"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@v0.3.5
 
     with:
       EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
@@ -112,7 +110,7 @@ jobs:
           - app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.5
     with:
       registry: gcr.io
       username: _json_key

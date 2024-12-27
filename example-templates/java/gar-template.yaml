@@ -5,19 +5,17 @@ on:
     types: [ submitted ]
     branches:
       - main
-      - master
       - development
   push:
     tags:
       - '*'
     branches:
       - main
-      - master
       - development
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.5
     secrets:
       GAR_SECRET: ${{ secrets.GAR_KEY }}
       
@@ -34,7 +32,7 @@ jobs:
             prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
 
-    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
@@ -64,7 +62,7 @@ jobs:
             namespace: "training"
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.5
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
