@@ -70,7 +70,7 @@ jobs:
   dockerize_stage:
     name: 🐳 Dockerize Stage
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')
     outputs:
       image: ${{ steps.output-image.outputs.image }}
     steps:

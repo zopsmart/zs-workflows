@@ -5,19 +5,17 @@ on:
     types: [ submitted ]
     branches:
       - main
-      - master
       - development
   push:
     tags:
       - '*'
     branches:
       - main
-      - master
       - development
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@v0.3.5
     secrets:
       GAR_SECRET: ${{ secrets.GAR_KEY }}
 
@@ -55,7 +53,7 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@v0.3.5
 
   prod_deployment:
     strategy:
@@ -84,4 +82,4 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.4
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.5

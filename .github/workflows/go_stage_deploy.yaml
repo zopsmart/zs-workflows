@@ -95,7 +95,7 @@ jobs:
   build_dockerize:
     runs-on: ubuntu-latest
     name: 🔨 Build and 🐳 Dockerize
-    if: (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main'  || github.ref == 'refs/heads/master') && (!startsWith(github.ref, 'refs/tags/v'))
+    if: (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main') && (!startsWith(github.ref, 'refs/tags/v'))
     outputs:
       image: ${{ steps.output-image.outputs.image }}
       deployment: ${{ steps.vars.outputs.deployment }}
@@ -117,7 +117,7 @@ jobs:
       - name: Check modified files
         id: vars
         run: |
-          if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+          if [[ "${{ github.ref }}" == 'refs/heads/main' ]]; then
               path="${{ inputs.PROD_ENV_FILE_PATH }}"
           else
               path="${{ inputs.STAGE_ENV_FILE_PATH }}"
@@ -150,7 +150,7 @@ jobs:
           go-version: '${{ inputs.GO_VERSION }}'
 
       - name: Get dependencies
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
         run: |
           git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           git config --global http.sslVerify false
@@ -162,11 +162,11 @@ jobs:
           ${{ inputs.DEPENDENCIES_COMMAND }}
 
       - name: Make Directory
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
         run: mkdir build
 
       - name: Build
-        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
+        if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
         run: |
           directory=$(pwd)
           cd ${{ inputs.DOCKER_FILE_PATH }}
@@ -178,7 +178,7 @@ jobs:
           fi
 
       - name: Login to GAR
-        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
         uses: docker/login-action@v2
         with:
           registry: ${{ inputs.IMAGE_REGISTRY }}
@@ -186,7 +186,7 @@ jobs:
           password: ${{ secrets.GAR_KEY }}
 
       - name: Push Docker Image to GAR
-        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -197,7 +197,7 @@ jobs:
             ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-image
-        if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
+        if: ${{ (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
         run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GAR_PROJECT }}/${{ inputs.GAR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   stage_deployment:
@@ -302,7 +302,7 @@ jobs:
 
       - name: Read ENV Files
         run: |
-          if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+          if [[ "${{ github.ref }}" == 'refs/heads/main' ]]; then
               path="${{ inputs.PROD_ENV_FILE_PATH }}"
           else
               path="${{ inputs.STAGE_ENV_FILE_PATH }}"
@@ -354,7 +354,7 @@ jobs:
 
       - name: Update configmap
         run: |
-          if [[ "${{ github.ref }}" == 'refs/heads/main' || "${{ github.ref }}" == 'refs/heads/master' ]]; then
+          if [[ "${{ github.ref }}" == 'refs/heads/main' ]]; then
               namespace="${{ inputs.PROD_NAMESPACE }}"
           else
               namespace="${{ inputs.STAGE_NAMESPACE }}"
