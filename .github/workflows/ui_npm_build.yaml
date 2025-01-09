@@ -154,7 +154,7 @@ jobs:
         run: |
           ${{ inputs.BUILD_COMMAND }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: (github.event_name == 'push')
         name: upload zipped build and node modules
         with:
