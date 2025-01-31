@@ -51,9 +51,9 @@ jobs:
         APP_NAME=main
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
-      IMAGE_REGISTRY: gcr.io
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       username: _json_key
-      GCR_PROJECT: zs-products
+      GCR_PROJECT: zs-products/zopping
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       SHA: '${{ needs.build.outputs.SHA }}'
@@ -76,9 +76,9 @@ jobs:
             type: deployment
     uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.6
     with:
-      IMAGE_REGISTRY: gcr.io
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       username: _json_key
-      GCR_PROJECT: zs-products
+      GCR_PROJECT: zs-products/zopping
       APP_NAME: '${{ matrix.app_name }}'
       CLUSTER_NAME: products-cluster
       NAMESPACE: '${{ matrix.namespace }}'

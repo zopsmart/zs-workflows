@@ -39,7 +39,7 @@ jobs:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
@@ -65,7 +65,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@v0.3.6
     with:
       APP_NAME: '${{ matrix.app_name }}'
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}

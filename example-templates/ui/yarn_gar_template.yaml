@@ -53,7 +53,7 @@ jobs:
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }} // Skip this input, if only dockerize is needed
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_REGION: cluster region
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       TYPE: ${{ matrix.type }}
@@ -78,7 +78,7 @@ jobs:
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}

@@ -83,9 +83,9 @@ jobs:
         APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
-      registry: gcr.io
+      registry: us-central1-docker.pkg.dev    #give path of artifact registry
       username: _json_key
-      GCR_PROJECT: zs-products # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
+      GCR_PROJECT: zs-products/zopping # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       ENV_FILE_PATH: ./configs/.stage.env
@@ -110,9 +110,9 @@ jobs:
             type: "cron"
     uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.6
     with:
-      registry: gcr.io
+      registry: us-central1-docker.pkg.dev    #give path of artifact registry
       username: _json_key
-      GCR_PROJECT: zs-products
+      GCR_PROJECT: zs-products/zopping
       APP_NAME: ${{ matrix.app_name }}
       CLUSTER_NAME: products-cluster
       NAMESPACE: ${{ matrix.namespace }}
