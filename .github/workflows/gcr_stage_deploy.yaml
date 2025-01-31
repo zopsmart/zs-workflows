@@ -74,7 +74,7 @@ jobs:
     outputs:
       image: ${{ steps.output-image.outputs.image }}
     name: 🐳 Dockerize - Stage
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main')
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -109,7 +109,7 @@ jobs:
         run: echo "image=`echo ${{ inputs.IMAGE_REGISTRY }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   update_configmap:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/development')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main')
     uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
     with:
       APP_NAME: ${{ inputs.APP_NAME }}
@@ -123,7 +123,7 @@ jobs:
   stage_deployment:
     runs-on: ubuntu-latest
     name: 🚀 Deploy to Stage
-    if: (github.ref == 'refs/heads/development') && (github.event_name == 'push')
+    if: (github.ref == 'refs/heads/main') && (github.event_name == 'push')
     needs: dockerize_stage
     container:
       image: ghcr.io/zopsmart/gha-images:deployments-0.1.3
