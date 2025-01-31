@@ -78,7 +78,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: 🧪 Test and 🔨 Build
-    if: (github.event.review.state == 'approved' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+    if: (github.event.review.state == 'approved' || github.ref == 'refs/heads/main')
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     steps:

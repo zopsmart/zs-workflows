@@ -5,17 +5,15 @@ on:
     types: [ submitted ]
     branches:
       - main
-      - development
   push:
     tags:
       - '*'
     branches:
       - main
-      - development
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@v0.3.6
     with:
       APP_NAME: ${{ vars.PROD_APP_NAME }}
       NODE_VERSION: '18.x'
@@ -45,7 +43,7 @@ jobs:
             app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
 
-    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@v0.3.6
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       BUILD_ARGUMENTS: |
@@ -53,7 +51,7 @@ jobs:
         APP_NAME=main
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}
@@ -75,9 +73,9 @@ jobs:
         include:
           - app_name: ${{ vars.PROD_APP_NAME }}
             namespace: ${{ vars.PROD_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@v0.3.6
     with:
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       APP_NAME: '${{ matrix.app_name }}'

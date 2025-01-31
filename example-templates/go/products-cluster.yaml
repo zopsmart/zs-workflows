@@ -5,13 +5,11 @@ on:
     types: [ submitted ]
     branches:
       - main
-      - development
   push:
     tags:
       - '*'
     branches:
       - main
-      - development
 env:
 
   APP_NAME: app-name
@@ -19,7 +17,7 @@ env:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@v0.3.6
     with:
       TESTCOVERAGE_THRESHOLD: 90
       APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
@@ -70,7 +68,7 @@ jobs:
             DOCKER_FILE_PATH: "./script/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "script-name"
             namespace: "namespace-name"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@v0.3.6
 
     with:
       EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
@@ -85,9 +83,9 @@ jobs:
         APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
-      registry: gcr.io
+      registry: us-central1-docker.pkg.dev    #give path of artifact registry
       username: _json_key
-      GCR_PROJECT: zs-products # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
+      GCR_PROJECT: zs-products/zopping # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       ENV_FILE_PATH: ./configs/.stage.env
@@ -110,11 +108,11 @@ jobs:
           - app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.6
     with:
-      registry: gcr.io
+      registry: us-central1-docker.pkg.dev    #give path of artifact registry
       username: _json_key
-      GCR_PROJECT: zs-products
+      GCR_PROJECT: zs-products/zopping
       APP_NAME: ${{ matrix.app_name }}
       CLUSTER_NAME: products-cluster
       NAMESPACE: ${{ matrix.namespace }}

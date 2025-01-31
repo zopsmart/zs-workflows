@@ -124,7 +124,7 @@ jobs:
 
   update_configmap:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main')
-    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@main
+    uses: zopsmart/zs-workflows/.github/workflows/update-configmap.yaml@v0.3.6
     with:
       APP_NAME: ${{ inputs.APP_NAME }}
       ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
