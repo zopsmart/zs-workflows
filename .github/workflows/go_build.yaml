@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: '1.20'
+      LINTER_VERSION:
+        description: 'linter version'
+        required: false
+        type: string
+        default: 'v1.54.2'
       ADD_SCHEMA:
         description: 'enable step to load DB schema'
         required: false
@@ -208,7 +213,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.54.2
+          version: ${{ inputs.LINTER_VERSION }}
           args: --timeout 8m
           skip-pkg-cache: true
           skip-build-cache: true
