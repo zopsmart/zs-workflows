@@ -16,6 +16,8 @@ on:
 jobs:
   test:
     uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.5
+    with:
+      JDK_VERSION: 'specify jdk version. Default is 11.0.10'
     secrets:
       GAR_SECRET: ${{ secrets.GAR_KEY }}
       
@@ -35,6 +37,7 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.5
     with:
       APP_NAME: ${{ matrix.app_name }}
+      JDK_VERSION: 'specify jdk version. Default is 11.0.10'
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}

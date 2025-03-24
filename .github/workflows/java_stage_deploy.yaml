@@ -6,6 +6,11 @@ on:
         description: 'name of postman collection file'
         required: true
         type: string
+      JDK_VERSION:
+        description: 'jdk version'
+        required: false
+        type: string
+        default: '11.0.10'
       TYPE:
         type: string
         description: "deployment or cron"
@@ -140,7 +145,7 @@ jobs:
         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push') && steps.vars.outputs.deployment == 'true' }}
         uses: actions/setup-java@v1
         with:
-          java-version: 11.0.10
+          java-version: '${{ inputs.JDK_VERSION }}'
 
       - name: Setting Project ID as env
         run: |
