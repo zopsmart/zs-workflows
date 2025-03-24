@@ -15,7 +15,7 @@ on:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.7
     with:
       JDK_VERSION: 'specify jdk version. Default is 11.0.10'
     secrets:
@@ -34,7 +34,7 @@ jobs:
             prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
 
-    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.7
     with:
       APP_NAME: ${{ matrix.app_name }}
       JDK_VERSION: 'specify jdk version. Default is 11.0.10'
@@ -65,7 +65,7 @@ jobs:
             namespace: "training"
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.7
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
