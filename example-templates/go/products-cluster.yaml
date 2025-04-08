@@ -24,6 +24,7 @@ jobs:
       TESTCOVERAGE_THRESHOLD: 90
       APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
       LINTER_VERSION: default one is v1.54.2 // not required
+      LINTER_TIMEOUT: default is 8m // not a required input
       POSTMAN_ENABLED: false
       ADD_SCHEMA: "true or false, to add schema to db"
       SCHEMA_COMMAND:  "command to load schema to database,
