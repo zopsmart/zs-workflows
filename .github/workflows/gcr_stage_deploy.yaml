@@ -101,12 +101,12 @@ jobs:
           push: true
           context: .
           file: ${{ inputs.DOCKER_FILE_PATH }}
-          tags: gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
+          tags: ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}
           build-args: |
             ${{ inputs.BUILD_ARGUMENTS }}
 
       - id: output-image
-        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ inputs.SHA }}`" >> "$GITHUB_OUTPUT"
 
   update_configmap:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/development')

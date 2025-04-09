@@ -118,11 +118,11 @@ jobs:
 
       - name: Re tag and Push Docker Image to GCR
         run: |
-          docker pull gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
-          docker tag gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
-          docker push gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
+          docker pull ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }}
+          docker tag ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ github.sha }} ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
+          docker push ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}
       - id: output-image
-        run: echo "image=`echo gcr.io/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}`" >> "$GITHUB_OUTPUT"
+        run: echo "image=`echo ${{ inputs.registry }}/${{ inputs.GCR_PROJECT }}/${{ inputs.APP_NAME }}:${{ env.RELEASE_VERSION }}`" >> "$GITHUB_OUTPUT"
 
   update_configmap:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main')
