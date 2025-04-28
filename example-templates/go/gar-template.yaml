@@ -15,7 +15,7 @@ on:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/go.yaml@v0.3.7
+    uses: zopsmart/zs-workflows/.github/workflows/go.yaml@v0.3.8
     with:
       POSTMAN_ENABLED: false
       GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
@@ -59,12 +59,9 @@ jobs:
             artifact_path: "based on build command" // use same binary name used in build command
             build_commands: "<build command>"
             DOCKER_FILE_PATH: "." # add step to grant executable permission to binary in docker file ex. chmod 777 /main
-            stage_namespace: ${{ vars.STAGE_NAMESPACE }}
-            prod_namespace: ${{ vars.PROD_NAMESPACE }}
+            namespace: ${{ vars.STAGE_NAMESPACE }}
             type: "deployment"
-            stage_env_file_path: "path of env file to store them in configmap of stage namespace"
-            prod_env_file_path: "path of env file to store them in configmap of prod namespace"
-    uses: zopsmart/zs-workflows/.github/workflows/go_stage_deploy.yaml@v0.3.7
+    uses: zopsmart/zs-workflows/.github/workflows/go_stage_deploy.yaml@v0.3.8
     with:
       APP_NAME: ${{ matrix.app_name }}
       ARTIFACT_PATH: ${{ matrix.artifact_path }}
@@ -75,10 +72,7 @@ jobs:
       GO_VERSION: 'specify go version like 1.19,1.20. Default is 1.20'
       BUILD_COMMAND: ${{ matrix.build_commands }}
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
-      STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
-      PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
-      STAGE_NAMESPACE: ${{ matrix.stage_namespace }}
-      PROD_NAMESPACE: ${{ matrix.prod_namespace }}
+      NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }}  // Skip this input, if only dockerize is needed
       CLUSTER_REGION: cluster region
@@ -98,9 +92,8 @@ jobs:
         include:
           - app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.PROD_NAMESPACE }}
-            env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.7
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.8
     with:
       APP_NAME: ${{ matrix.app_name }}
       IMAGE_REGISTRY: us-central1-docker.pkg.dev
@@ -110,7 +103,6 @@ jobs:
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}
       CLUSTER_REGION: cluster region
       NAMESPACE: ${{ matrix.namespace }}
-      ENV_FILE_PATH: ${{ matrix.env_file_path }}
       TYPE: ${{ matrix.type }}
     secrets:
       GAR_KEY: ${{ secrets.PROD_GAR_KEY }}
