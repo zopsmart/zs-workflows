@@ -73,6 +73,11 @@ on:
         type: boolean
         required: false
         default: false
+      USE_GAR_PKG:
+        description: 'whether to fetch pacakages from GAR'
+        required: false
+        type: boolean
+        default: false
 
     secrets:
       PAT:
@@ -83,6 +88,9 @@ on:
         required: true
       NPM_TOKEN:
         description: 'npm token'
+        required: false
+      GAR_SECRET:
+        description: 'gar key'
         required: false
 
 jobs:
@@ -144,11 +152,25 @@ jobs:
         with:
           node-version: ${{ inputs.NODE_VERSION }}
 
+      - name: Authorize to GCP service account to pull rocket packages from GAR
+        if: ${{ inputs.USE_GAR_PKG }}
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_SECRET }}
+
       - name: installing dependencies and zipping node modules
         if: ${{ ((github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && (github.event_name == 'push')) && steps.vars.outputs.deployment == 'true' }}
         run: |
-          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
+          if [[ "${{ inputs.USE_GAR_PKG }}" == "true" ]]; then
+            echo '${{ secrets.GAR_SECRET }}' > credentials.json
+            PROJECT_ID=$(jq -r '.project_id' credentials.json)
+            ACCESS_TOKEN=$(gcloud auth print-access-token)
+            echo "@zopsmart:registry=https://us-central1-npm.pkg.dev/${PROJECT_ID}/npm-packages/" >> ~/.npmrc
+            echo "//us-central1-npm.pkg.dev/:_authToken=${ACCESS_TOKEN}" >> ~/.npmrc
+          else
+            echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.PAT }}" >> ~/.npmrc
+          fi
           npm install ${{ inputs.DEPENDENCIES_FLAG }}
 
       - name: Build
