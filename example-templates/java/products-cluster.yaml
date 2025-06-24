@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@v0.3.7
+    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@v0.3.9
     with:
       JDK_VERSION: 'specify jdk version. Default is 11.0.10'
     secrets:
@@ -55,7 +55,7 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@v0.3.7
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@v0.3.9
 
   prod_deployment:
     strategy:
@@ -84,4 +84,4 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.7
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.9
