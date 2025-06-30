@@ -167,6 +167,7 @@ jobs:
            ACCESS_TOKEN=$(gcloud auth print-access-token)
            echo "@zopsmart:registry=https://us-central1-npm.pkg.dev/${PROJECT_ID}/npm-packages/" >> ~/.npmrc
            echo "//us-central1-npm.pkg.dev/${PROJECT_ID}/npm-packages/:_authToken=${ACCESS_TOKEN}" >> ~/.npmrc
+           rm -rf credentials.json
           else
             echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
