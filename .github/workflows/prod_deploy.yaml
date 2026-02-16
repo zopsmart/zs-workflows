@@ -79,7 +79,7 @@ jobs:
 
       - name: Set up Docker CLI
         if: ${{ steps.tag-check.outputs.tag_exists == 'true' }}
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: ${{ inputs.IMAGE_REGISTRY }}
           username: _json_key
