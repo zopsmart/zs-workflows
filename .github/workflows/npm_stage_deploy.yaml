@@ -185,7 +185,7 @@ jobs:
     needs: [ build_dockerize ]
     if: ${{ inputs.CLUSTER_NAME != '' && (github.ref == 'refs/heads/main') && needs.build_dockerize.outputs.deployment == 'true' }}
     container:
-      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.5
       options: --rm
     name: 🚀 Stage Deployment and Update Configmap
     env:
@@ -265,7 +265,7 @@ jobs:
     name: Update Only Configmap
     needs: build_dockerize
     container:
-      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.5
       options: --rm
     if: ${{ inputs.CLUSTER_NAME != '' && needs.build_dockerize.outputs.configmap == 'true' && needs.build_dockerize.outputs.deployment != 'true' }}
     steps:
