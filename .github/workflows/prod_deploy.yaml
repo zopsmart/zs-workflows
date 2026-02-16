@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/v')}}
     container:
-      image: ghcr.io/zopsmart/gha-images:deployments-0.1.4
+      image: ghcr.io/zopsmart/gha-images:deployments-0.1.5
       options: --rm
     name: 🚀 Prod Deployment and Update Configmap
     steps:

@@ -87,7 +87,7 @@ jobs:
       - name: Extract Release Tag
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Set up Docker CLI
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: ${{ inputs.IMAGE_REGISTRY }}
           username: _json_key
