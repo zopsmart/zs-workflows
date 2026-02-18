@@ -1,6 +1,12 @@
 name: "checkout and build"
 on:
   workflow_call:
+    inputs:
+      JDK_VERSION:
+        description: 'jdk version'
+        required: false
+        type: string
+        default: '11.0.10'
     secrets:
       GAR_SECRET:
         description: 'required input'
@@ -15,7 +21,7 @@ jobs:
       - name: Set up JDK 11
         uses: actions/setup-java@v1
         with:
-          java-version: 11.0.10
+          java-version: '${{ inputs.JDK_VERSION }}'
       - name: Check out code
         uses: actions/checkout@v4
 

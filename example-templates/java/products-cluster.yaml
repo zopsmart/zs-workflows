@@ -5,15 +5,19 @@ on:
     types: [ submitted ]
     branches:
       - main
+      - development
   push:
     tags:
       - '*'
     branches:
       - main
+      - development
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/java_build.yaml@v0.3.9
+    with:
+      JDK_VERSION: 'specify jdk version. Default is 11.0.10'
     secrets:
       GAR_SECRET: ${{ secrets.GAR_KEY }}
 
@@ -30,7 +34,7 @@ jobs:
 
 
     with:
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: gcr.io
       username: _json_key
       PROJECT_NAME: "zs-products"
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
@@ -41,7 +45,7 @@ jobs:
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
-      GCR_PROJECT: zs-products/zopping
+      GCR_PROJECT: zs-products
       SHA: ${{ github.sha }}
       TYPE: ${{ matrix.type }}
       ARTIFACT_PATH: build/libs
@@ -51,7 +55,7 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_stage_deploy.yaml@v0.3.9
 
   prod_deployment:
     strategy:
@@ -64,14 +68,14 @@ jobs:
 
 
     with:
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: gcr.io
       username: _json_key
       PROJECT_NAME: "zs-products"
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
-      GCR_PROJECT: zs-products/zopping
+      GCR_PROJECT: zs-products
       TYPE: ${{ matrix.type }}
       ARTIFACT_PATH: build/libs
       ARTIFACT_NAME: artifacts
@@ -80,4 +84,4 @@ jobs:
       GCR_KEY: ${{ secrets.GCR_KEY }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY}}
 
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.5
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.9

@@ -53,6 +53,12 @@ on:
         type: string
         default: "./configs/.stage.env"
 
+      USE_GAR_PKG:
+        description: 'whether to fetch pacakages from GAR'
+        required: false
+        type: boolean
+        default: false
+
     secrets:
       PAT:
         description: 'required input'
@@ -62,6 +68,9 @@ on:
         required: true
       NPM_TOKEN:
         description: 'npm token'
+        required: false
+      GAR_SECRET:
+        description: 'gar key'
         required: false
 
 
@@ -92,11 +101,25 @@ jobs:
         with:
           name: ${{ inputs.APP_NAME }}
 
+      - name: Authorize to GCP service account to pull rocket packages from GAR
+        if: ${{ inputs.USE_GAR_PKG }}
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GAR_SECRET }}
+
       - name: Create .npmrc File
         if: ${{ inputs.CREATE_NPMRC }}
         run: |
-          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+          if [[ "${{ inputs.USE_GAR_PKG }}" == "true" ]]; then
+            echo '${{ secrets.GAR_SECRET }}' > credentials.json
+            PROJECT_ID=$(jq -r '.project_id' credentials.json)
+            ACCESS_TOKEN=$(gcloud auth print-access-token)
+            echo "@zopsmart:registry=https://us-central1-npm.pkg.dev/${PROJECT_ID}/npm-packages/" >> ~/.npmrc
+            echo "//us-central1-npm.pkg.dev/${PROJECT_ID}/npm-packages/:_authToken=${ACCESS_TOKEN}" >> ~/.npmrc
+          else
+            echo "@zopsmart:registry=https://npm.pkg.github.com/" >> .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+          fi
 
       - name: Unzipping artifacts
         id: tag

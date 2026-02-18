@@ -7,10 +7,11 @@ name: Build and Deploy
       - '*'
     branches:
       - main
+      - development
 
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn_build.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/ui_yarn_build.yaml@v0.3.9
     with:
       APP_NAME: rlog-api
       NODE_VERSION: '18.x'
@@ -34,12 +35,12 @@ jobs:
           - DOCKER_FILE_PATH: .
             app_name: ${{ vars.STAGE_APP_NAME }}
             namespace: ${{ vars.STAGE_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/ui_gar_stage_deploy.yaml@v0.3.9
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
@@ -62,10 +63,10 @@ jobs:
         include:
           - app_name: ${{ vars.PROD_APP_NAME }}
             namespace: ${{ vars.PROD_NAMESPACE }}
-    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/go_gar_prod_deploy.yaml@v0.3.9
     with:
       APP_NAME: '${{ matrix.app_name }}'
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}

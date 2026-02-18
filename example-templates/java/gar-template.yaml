@@ -5,15 +5,19 @@ on:
     types: [ submitted ]
     branches:
       - main
+      - development
   push:
     tags:
       - '*'
     branches:
       - main
+      - development
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/java.yaml@v0.3.9
+    with:
+      JDK_VERSION: 'specify jdk version. Default is 11.0.10'
     secrets:
       GAR_SECRET: ${{ secrets.GAR_KEY }}
       
@@ -30,9 +34,10 @@ jobs:
             prod_namespace: ${{ vars.PROD_NAMESPACE }}
             type: "deployment"
 
-    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/java_stage_deploy.yaml@v0.3.9
     with:
       APP_NAME: ${{ matrix.app_name }}
+      JDK_VERSION: 'specify jdk version. Default is 11.0.10'
       DOCKER_FILE_PATH: ${{ matrix.DOCKER_FILE_PATH }}
       STAGE_ENV_FILE_PATH: ${{ matrix.stage_env_file_path }}
       PROD_ENV_FILE_PATH: ${{ matrix.prod_env_file_path }}
@@ -41,7 +46,7 @@ jobs:
       CLUSTER_NAME: ${{ vars.STAGE_CLUSTER_NAME }} // Skip this input, if only dockerize is needed
       CLUSTER_PROJECT: ${{ vars.STAGE_CLUSTER_PROJECT }}
       CLUSTER_REGION: cluster region
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.STAGE_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.STAGE_GAR_REGISTRY }}
       TYPE: ${{ matrix.type }}
@@ -60,11 +65,11 @@ jobs:
             namespace: "training"
             env_file_path: "path of env file to store them in configmap of prod namespace"
             type: "deployment"
-    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/prod_deploy.yaml@v0.3.9
     with:
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: us-central1-docker.pkg.dev
       GAR_PROJECT: ${{ vars.PROD_GAR_PROJECT }}
       GAR_REGISTRY: ${{ vars.PROD_GAR_REGISTRY }}
       CLUSTER_NAME: ${{ vars.PROD_CLUSTER_NAME }}

@@ -18,6 +18,16 @@ on:
         required: false
         type: string
         default: '1.20'
+      LINTER_VERSION:
+        description: 'linter version'
+        required: false
+        type: string
+        default: 'v1.54.2'
+      LINTER_TIMEOUT:
+        description: 'timeout value for linters'
+        required: false
+        type: string
+        default: '8m'
       ADD_SCHEMA:
         description: 'enable step to load DB schema'
         required: false
@@ -100,7 +110,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: 🧪 Test and linters
-    if: ${{ github.ref == 'refs/heads/main' || github.event.review.state == 'approved' }}
+    if: ${{ github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || (github.event.review.state == 'approved') }}
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
@@ -208,8 +218,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.54.2
-          args: --timeout 8m
+          version: ${{ inputs.LINTER_VERSION }}
+          args: --timeout ${{ inputs.LINTER_TIMEOUT }}
           skip-pkg-cache: true
           skip-build-cache: true
 

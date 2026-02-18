@@ -7,9 +7,10 @@ name: Build and Deploy
       - '*'
     branches:
       - main
+      - development
 jobs:
   build:
-    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/ui_npm_build.yaml@v0.3.9
     with:
       APP_NAME: smart-quiz-admin-ui
       NODE_VERSION: '16.x'
@@ -43,7 +44,7 @@ jobs:
             app_name: smart-quiz-candidate-ui
             namespace: quizzing-pro-stage
             type: deployment
-    uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/ui_stage_deploy.yaml@v0.3.9
     with:
       DOCKER_FILE_PATH: '${{ matrix.DOCKER_FILE_PATH }}'
       BUILD_ARGUMENTS: |
@@ -51,9 +52,9 @@ jobs:
         APP_NAME=main
       APP_NAME: '${{ matrix.app_name }}'
       NAMESPACE: '${{ matrix.namespace }}'
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: gcr.io
       username: _json_key
-      GCR_PROJECT: zs-products/zopping
+      GCR_PROJECT: zs-products
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       SHA: '${{ needs.build.outputs.SHA }}'
@@ -74,11 +75,11 @@ jobs:
             app_name: smart-quiz-candidate-ui
             namespace: quizzing-pro-stage
             type: deployment
-    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/gcr_prod_deploy.yaml@v0.3.9
     with:
-      IMAGE_REGISTRY: us-central1-docker.pkg.dev    #give path of artifact registry
+      IMAGE_REGISTRY: gcr.io
       username: _json_key
-      GCR_PROJECT: zs-products/zopping
+      GCR_PROJECT: zs-products
       APP_NAME: '${{ matrix.app_name }}'
       CLUSTER_NAME: products-cluster
       NAMESPACE: '${{ matrix.namespace }}'

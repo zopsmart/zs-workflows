@@ -5,11 +5,13 @@ on:
     types: [ submitted ]
     branches:
       - main
+      - development
   push:
     tags:
       - '*'
     branches:
       - main
+      - development
 env:
 
   APP_NAME: app-name
@@ -17,10 +19,12 @@ env:
 
 jobs:
   test:
-    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/go_build.yaml@v0.3.9
     with:
       TESTCOVERAGE_THRESHOLD: 90
       APP_NAME: "postman collection should have file structure - postman-collections/<APP_NAME>.postman-collection.json"
+      LINTER_VERSION: default one is v1.54.2 // not required
+      LINTER_TIMEOUT: default is 8m // not a required input
       POSTMAN_ENABLED: false
       ADD_SCHEMA: "true or false, to add schema to db"
       SCHEMA_COMMAND:  "command to load schema to database,
@@ -68,7 +72,7 @@ jobs:
             DOCKER_FILE_PATH: "./script/" # add step to grant executable permission to binary in docker file ex. chmod 777 /main
             app_name: "script-name"
             namespace: "namespace-name"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_stage_deploy.yaml@v0.3.9
 
     with:
       EXTRA_DEPENDENCIES: "ture or false , to load extra dependencies"
@@ -83,9 +87,9 @@ jobs:
         APP_NAME=main
       APP_NAME: ${{ matrix.app_name }}
       NAMESPACE: ${{ matrix.namespace }}
-      registry: us-central1-docker.pkg.dev    #give path of artifact registry
+      registry: gcr.io
       username: _json_key
-      GCR_PROJECT: zs-products/zopping # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
+      GCR_PROJECT: zs-products # give  project-name/group-name  if you want to group images like gcr.io/gcp-project/group-1/service:${{ inputs.SHA }}
       CLUSTER_NAME: products-cluster
       CLUSTER_PROJECT: zs-products
       ENV_FILE_PATH: ./configs/.stage.env
@@ -108,11 +112,11 @@ jobs:
           - app_name: "cron-name"
             namespace: "namespace-name"
             type: "cron"
-    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.6
+    uses: zopsmart/zs-workflows/.github/workflows/go_gcr_prod_deploy.yaml@v0.3.9
     with:
-      registry: us-central1-docker.pkg.dev    #give path of artifact registry
+      registry: gcr.io
       username: _json_key
-      GCR_PROJECT: zs-products/zopping
+      GCR_PROJECT: zs-products
       APP_NAME: ${{ matrix.app_name }}
       CLUSTER_NAME: products-cluster
       NAMESPACE: ${{ matrix.namespace }}
