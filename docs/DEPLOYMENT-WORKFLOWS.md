@@ -293,7 +293,31 @@ Set these in your repository's Settings > Secrets and variables > Actions > Secr
 All inputs follow this resolution order:
 1. Workflow input (if provided)
 2. Repository variable (`vars.*`)
-3. Derived default (based on `REGISTRY_TYPE` or `CLUSTER_AUTH_METHOD`)
+3. Derived default (based on `REGISTRY_TYPE`)
+
+### Auth Method Auto-Detection
+
+The cluster auth method is automatically detected (no input required):
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AUTH METHOD AUTO-DETECTION                        │
+│                                                                      │
+│  1. From JSON credentials:                                          │
+│     ├─► type: service_account           → GKE                       │
+│     ├─► aws_access_key_id present       → EKS                       │
+│     ├─► clientId present                → AKS                       │
+│     └─► Base64 kubeconfig               → kubeconfig                │
+│                                                                      │
+│  2. From inputs/vars/secrets (if JSON detection fails):             │
+│     ├─► AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY set   → EKS      │
+│     ├─► AZURE_CLIENT_ID or AZURE_CLIENT_SECRET set       → AKS      │
+│     └─► CLUSTER_PROJECT set                              → GKE      │
+│                                                                      │
+│  3. Default: kubeconfig                                             │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ## Image Path Construction
 
