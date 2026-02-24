@@ -3,6 +3,11 @@ name: "Validate Cluster Auth"
 on:
   workflow_call:
     inputs:
+      CLUSTER_AUTH_METHOD:
+        description: 'Explicit auth method: gke, eks, aks, kubeconfig (auto-detected from credentials if not specified)'
+        required: false
+        type: string
+        default: ''
       # GKE inputs
       CLUSTER_PROJECT:
         description: 'GCP project (for GKE)'
@@ -57,8 +62,23 @@ on:
 
     secrets:
       CLUSTER_CREDENTIALS:
-        description: 'Auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig'
+        description: 'GCP SA key, AWS JSON, Azure JSON, base64 kubeconfig, or raw secret'
         required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: 'AWS secret access key (for EKS, fallback if not in CLUSTER_CREDENTIALS)'
+        required: false
+      AWS_ACCESS_KEY_ID:
+        description: 'AWS access key ID as secret (for EKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        required: false
+      AZURE_CLIENT_SECRET:
+        description: 'Azure client secret (for AKS, fallback if not in CLUSTER_CREDENTIALS)'
+        required: false
+      AZURE_CLIENT_ID:
+        description: 'Azure client ID as secret (for AKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        required: false
+      AZURE_TENANT_ID:
+        description: 'Azure tenant ID as secret (for AKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        required: false
 
 jobs:
   validate:
@@ -106,6 +126,8 @@ jobs:
               echo "is_kubeconfig=true" >> "$GITHUB_OUTPUT"
             else
               echo "is_kubeconfig=false" >> "$GITHUB_OUTPUT"
+              # Store raw credential for potential use as secret value
+              echo "raw_credential=$CREDS" >> "$GITHUB_OUTPUT"
             fi
           fi
         shell: bash
@@ -121,7 +143,7 @@ jobs:
 
           # ---------------------------------------------------------
           # Auto-detect auth method from credential format
-          # (No input needed - credential format dictates auth method)
+          # Falls back to CLUSTER_AUTH_METHOD input if auto-detection fails
           # ---------------------------------------------------------
           AUTH_METHOD=""
           if [[ "${{ steps.retrieve.outputs.json_gcp_type }}" == "service_account" ]]; then
@@ -132,8 +154,11 @@ jobs:
             AUTH_METHOD="aks"
           elif [[ "${{ steps.retrieve.outputs.is_kubeconfig }}" == "true" ]]; then
             AUTH_METHOD="kubeconfig"
+          elif [[ -n "${{ inputs.CLUSTER_AUTH_METHOD }}" ]]; then
+            # Use explicit input when auto-detection fails (e.g., raw secret credentials)
+            AUTH_METHOD="${{ inputs.CLUSTER_AUTH_METHOD }}"
           else
-            errors+="Unable to detect auth method from credentials. Expected: GCP SA JSON, AWS JSON, Azure JSON, or base64 kubeconfig\n"
+            errors+="Unable to detect auth method. Provide CLUSTER_AUTH_METHOD or use full JSON credentials\n"
           fi
           echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"
 
@@ -151,17 +176,23 @@ jobs:
           # Required: aws credentials, CLUSTER_NAME, region
           # ---------------------------------------------------------
           elif [[ "$AUTH_METHOD" == "eks" ]]; then
-            # -- Secret already validated by detection --
+            # -- Secret: JSON -> raw CLUSTER_CREDENTIALS -> AWS_SECRET_ACCESS_KEY secret --
             SECRET="${{ steps.retrieve.outputs.json_aws_secret_access_key }}"
+            [[ -z "$SECRET" ]] && SECRET="${{ steps.retrieve.outputs.raw_credential }}"
+            [[ -z "$SECRET" ]] && SECRET='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+            [[ -z "$SECRET" ]] && errors+="aws_secret_access_key not found in CLUSTER_CREDENTIALS or AWS_SECRET_ACCESS_KEY secret\n"
 
-            # -- Access Key ID: input -> JSON --
-            KEY_ID="${{ inputs.AWS_ACCESS_KEY_ID }}"
-            [[ -z "$KEY_ID" ]] && KEY_ID="${{ steps.retrieve.outputs.json_aws_access_key_id }}"
-            [[ -z "$KEY_ID" ]] && errors+="aws_access_key_id is required (as input or in JSON)\n"
+            # -- Access Key ID: JSON -> input -> vars -> secret --
+            KEY_ID="${{ steps.retrieve.outputs.json_aws_access_key_id }}"
+            [[ -z "$KEY_ID" ]] && KEY_ID="${{ inputs.AWS_ACCESS_KEY_ID }}"
+            [[ -z "$KEY_ID" ]] && KEY_ID='${{ vars.AWS_ACCESS_KEY_ID }}'
+            [[ -z "$KEY_ID" ]] && KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
+            [[ -z "$KEY_ID" ]] && errors+="aws_access_key_id not found in CLUSTER_CREDENTIALS, input, vars, or secret\n"
 
-            # -- Region: input -> JSON -> CLUSTER_REGION input --
-            REGION="${{ inputs.AWS_REGION }}"
-            [[ -z "$REGION" ]] && REGION="${{ steps.retrieve.outputs.json_aws_region }}"
+            # -- Region: JSON -> input -> vars -> CLUSTER_REGION input --
+            REGION="${{ steps.retrieve.outputs.json_aws_region }}"
+            [[ -z "$REGION" ]] && REGION="${{ inputs.AWS_REGION }}"
+            [[ -z "$REGION" ]] && REGION='${{ vars.AWS_REGION }}'
             [[ -z "$REGION" ]] && REGION="${{ inputs.CLUSTER_REGION }}"
             [[ -z "$REGION" ]] && errors+="AWS_REGION or CLUSTER_REGION is required for EKS\n"
 
@@ -177,18 +208,25 @@ jobs:
           # Required: Azure credentials, CLUSTER_NAME, AZURE_RESOURCE_GROUP
           # ---------------------------------------------------------
           elif [[ "$AUTH_METHOD" == "aks" ]]; then
-            # -- Secret already validated by detection --
+            # -- Secret: JSON -> raw CLUSTER_CREDENTIALS -> AZURE_CLIENT_SECRET secret --
             SECRET="${{ steps.retrieve.outputs.json_client_secret }}"
+            [[ -z "$SECRET" ]] && SECRET="${{ steps.retrieve.outputs.raw_credential }}"
+            [[ -z "$SECRET" ]] && SECRET='${{ secrets.AZURE_CLIENT_SECRET }}'
+            [[ -z "$SECRET" ]] && errors+="clientSecret not found in CLUSTER_CREDENTIALS or AZURE_CLIENT_SECRET secret\n"
 
-            # -- Client ID: input -> JSON --
-            CLIENT_ID="${{ inputs.AZURE_CLIENT_ID }}"
-            [[ -z "$CLIENT_ID" ]] && CLIENT_ID="${{ steps.retrieve.outputs.json_client_id }}"
-            [[ -z "$CLIENT_ID" ]] && errors+="clientId is required (as input or in JSON)\n"
+            # -- Client ID: JSON -> input -> vars -> secret --
+            CLIENT_ID="${{ steps.retrieve.outputs.json_client_id }}"
+            [[ -z "$CLIENT_ID" ]] && CLIENT_ID="${{ inputs.AZURE_CLIENT_ID }}"
+            [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ vars.AZURE_CLIENT_ID }}'
+            [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ secrets.AZURE_CLIENT_ID }}'
+            [[ -z "$CLIENT_ID" ]] && errors+="clientId not found in CLUSTER_CREDENTIALS, input, vars, or secret\n"
 
-            # -- Tenant ID: input -> JSON --
-            TENANT_ID="${{ inputs.AZURE_TENANT_ID }}"
-            [[ -z "$TENANT_ID" ]] && TENANT_ID="${{ steps.retrieve.outputs.json_tenant_id }}"
-            [[ -z "$TENANT_ID" ]] && errors+="tenantId is required (as input or in JSON)\n"
+            # -- Tenant ID: JSON -> input -> vars -> secret --
+            TENANT_ID="${{ steps.retrieve.outputs.json_tenant_id }}"
+            [[ -z "$TENANT_ID" ]] && TENANT_ID="${{ inputs.AZURE_TENANT_ID }}"
+            [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ vars.AZURE_TENANT_ID }}'
+            [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ secrets.AZURE_TENANT_ID }}'
+            [[ -z "$TENANT_ID" ]] && errors+="tenantId not found in CLUSTER_CREDENTIALS, input, vars, or secret\n"
 
             # -- Cluster inputs --
             [[ -z "${{ inputs.CLUSTER_NAME }}" ]] && errors+="CLUSTER_NAME is required for AKS\n"

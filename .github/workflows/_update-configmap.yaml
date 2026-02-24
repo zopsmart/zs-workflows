@@ -42,9 +42,24 @@ on:
         required: false
         type: string
         default: ''
+      AWS_ACCESS_KEY_ID:
+        description: 'AWS access key ID (for EKS, fallback if not in CLUSTER_CREDENTIALS)'
+        required: false
+        type: string
+        default: ''
       # AKS inputs
       AZURE_RESOURCE_GROUP:
         description: 'Azure resource group (for AKS)'
+        required: false
+        type: string
+        default: ''
+      AZURE_CLIENT_ID:
+        description: 'Azure client ID (for AKS, fallback if not in CLUSTER_CREDENTIALS)'
+        required: false
+        type: string
+        default: ''
+      AZURE_TENANT_ID:
+        description: 'Azure tenant ID (for AKS, fallback if not in CLUSTER_CREDENTIALS)'
         required: false
         type: string
         default: ''
@@ -61,8 +76,23 @@ on:
 
     secrets:
       CLUSTER_CREDENTIALS:
-        description: 'Cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        description: 'Cluster auth credentials (GCP SA key, AWS JSON, Azure JSON, base64 kubeconfig, or raw secret)'
         required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: 'AWS secret access key (for EKS, fallback if not in CLUSTER_CREDENTIALS)'
+        required: false
+      AWS_ACCESS_KEY_ID:
+        description: 'AWS access key ID as secret (for EKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        required: false
+      AZURE_CLIENT_SECRET:
+        description: 'Azure client secret (for AKS, fallback if not in CLUSTER_CREDENTIALS)'
+        required: false
+      AZURE_CLIENT_ID:
+        description: 'Azure client ID as secret (for AKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        required: false
+      AZURE_TENANT_ID:
+        description: 'Azure tenant ID as secret (for AKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        required: false
 
 jobs:
   update_configmap:
@@ -153,16 +183,40 @@ jobs:
         run: |
           CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
 
-          if echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
-            AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.aws_access_key_id')
+          # AWS_SECRET_ACCESS_KEY: JSON -> raw CLUSTER_CREDENTIALS -> secret
+          AWS_SECRET_ACCESS_KEY=""
+          if echo "$CREDS" | jq -e '.aws_secret_access_key' > /dev/null 2>&1; then
             AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.aws_secret_access_key')
-          else
-            echo "ERROR: CLUSTER_CREDENTIALS must be JSON with aws_access_key_id and aws_secret_access_key"
+          elif [[ -n "$CREDS" && ! "$CREDS" =~ ^\{.*\}$ ]]; then
+            AWS_SECRET_ACCESS_KEY="$CREDS"
+          fi
+          [[ -z "$AWS_SECRET_ACCESS_KEY" ]] && AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+          if [[ -z "$AWS_SECRET_ACCESS_KEY" ]]; then
+            echo "ERROR: aws_secret_access_key not found in CLUSTER_CREDENTIALS or AWS_SECRET_ACCESS_KEY secret"
             exit 1
           fi
 
-          AWS_REGION="${{ inputs.AWS_REGION }}"
-          [[ -z "$AWS_REGION" ]] && AWS_REGION="${{ inputs.CLUSTER_REGION }}"
+          # AWS_ACCESS_KEY_ID: JSON -> input -> vars -> secret
+          AWS_ACCESS_KEY_ID=""
+          if echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
+            AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.aws_access_key_id')
+          fi
+          [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ inputs.AWS_ACCESS_KEY_ID }}'
+          [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ vars.AWS_ACCESS_KEY_ID }}'
+          [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
+          if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
+            echo "ERROR: aws_access_key_id not found in CLUSTER_CREDENTIALS, input, vars, or secret"
+            exit 1
+          fi
+
+          # AWS_REGION: JSON -> input -> vars -> CLUSTER_REGION input
+          AWS_REGION=""
+          if echo "$CREDS" | jq -e '.aws_region' > /dev/null 2>&1; then
+            AWS_REGION=$(echo "$CREDS" | jq -r '.aws_region')
+          fi
+          [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ inputs.AWS_REGION }}'
+          [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ vars.AWS_REGION }}'
+          [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ inputs.CLUSTER_REGION }}'
 
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
@@ -182,12 +236,42 @@ jobs:
         run: |
           CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
 
+          # AZURE_CLIENT_SECRET: JSON -> raw CLUSTER_CREDENTIALS -> secret
+          CLIENT_SECRET=""
+          if echo "$CREDS" | jq -e '.clientSecret' > /dev/null 2>&1; then
+            CLIENT_SECRET=$(echo "$CREDS" | jq -r '.clientSecret')
+          elif [[ -n "$CREDS" && ! "$CREDS" =~ ^\{.*\}$ ]]; then
+            CLIENT_SECRET="$CREDS"
+          fi
+          [[ -z "$CLIENT_SECRET" ]] && CLIENT_SECRET='${{ secrets.AZURE_CLIENT_SECRET }}'
+          if [[ -z "$CLIENT_SECRET" ]]; then
+            echo "ERROR: clientSecret not found in CLUSTER_CREDENTIALS or AZURE_CLIENT_SECRET secret"
+            exit 1
+          fi
+
+          # AZURE_CLIENT_ID: JSON -> input -> vars -> secret
+          CLIENT_ID=""
           if echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
             CLIENT_ID=$(echo "$CREDS" | jq -r '.clientId')
-            CLIENT_SECRET=$(echo "$CREDS" | jq -r '.clientSecret')
+          fi
+          [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ inputs.AZURE_CLIENT_ID }}'
+          [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ vars.AZURE_CLIENT_ID }}'
+          [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ secrets.AZURE_CLIENT_ID }}'
+          if [[ -z "$CLIENT_ID" ]]; then
+            echo "ERROR: clientId not found in CLUSTER_CREDENTIALS, input, vars, or secret"
+            exit 1
+          fi
+
+          # AZURE_TENANT_ID: JSON -> input -> vars -> secret
+          TENANT_ID=""
+          if echo "$CREDS" | jq -e '.tenantId' > /dev/null 2>&1; then
             TENANT_ID=$(echo "$CREDS" | jq -r '.tenantId')
-          else
-            echo "ERROR: CLUSTER_CREDENTIALS must be JSON with clientId, clientSecret, and tenantId"
+          fi
+          [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ inputs.AZURE_TENANT_ID }}'
+          [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ vars.AZURE_TENANT_ID }}'
+          [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ secrets.AZURE_TENANT_ID }}'
+          if [[ -z "$TENANT_ID" ]]; then
+            echo "ERROR: tenantId not found in CLUSTER_CREDENTIALS, input, vars, or secret"
             exit 1
           fi
 
