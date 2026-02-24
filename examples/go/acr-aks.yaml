@@ -1,0 +1,47 @@
+# Example: Go service with Azure Container Registry (ACR) + Azure Kubernetes Service (AKS)
+#
+# Required repository variables (vars.*):
+#   - REGISTRY_TYPE: "acr"
+#   - IMAGE_REGISTRY: "myregistry.azurecr.io"
+#   - CLUSTER_NAME: "my-aks-cluster"
+#   - AZURE_RESOURCE_GROUP: "my-resource-group"
+#   - APP_NAME: "my-service"
+#
+# Required repository secrets (secrets.*):
+#   - REGISTRY_CREDENTIALS: Azure credentials JSON
+#     Example: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
+#   - CLUSTER_CREDENTIALS: Azure credentials JSON (can be same as REGISTRY_CREDENTIALS)
+#     Example: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
+#   - PAT: GitHub Personal Access Token (for private dependencies)
+
+name: Deploy
+
+on:
+  push:
+    branches: [development]
+  release:
+    types: [published]
+
+jobs:
+  stage:
+    if: github.ref == 'refs/heads/development'
+    uses: zopsmart/zs-workflows/.github/workflows/stage-deploy.yaml@main
+    with:
+      SVC_NAME: my-service
+      BUILD_COMMAND: go build -o main ./cmd/...  # Language auto-detected as 'go'
+      REGISTRY_TYPE: acr
+      IMAGE_REGISTRY: myregistry.azurecr.io
+      CLUSTER_NAME: my-aks-cluster
+      AZURE_RESOURCE_GROUP: my-resource-group
+    secrets: inherit
+
+  prod:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: zopsmart/zs-workflows/.github/workflows/prod-deploy.yaml@main
+    with:
+      SVC_NAME: my-service
+      REGISTRY_TYPE: acr
+      IMAGE_REGISTRY: myregistry.azurecr.io
+      CLUSTER_NAME: my-aks-cluster
+      AZURE_RESOURCE_GROUP: my-resource-group
+    secrets: inherit
