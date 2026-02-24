@@ -153,8 +153,11 @@ on:
       REGISTRY_CREDENTIALS:
         description: 'Registry auth credentials (auto-detected: GCP SA JSON, AWS JSON, Azure JSON, or password/token)'
         required: false
+      STAGE_CLUSTER_CREDENTIALS:
+        description: 'Stage cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        required: false
       CLUSTER_CREDENTIALS:
-        description: 'Cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        description: 'Fallback cluster auth credentials (used if STAGE_CLUSTER_CREDENTIALS not provided)'
         required: false
       # Legacy support
       GAR_KEY:
@@ -421,7 +424,7 @@ jobs:
       DEPLOY_METHOD: ${{ inputs.DEPLOY_METHOD }}
       HELM_VALUES_PATH: ${{ inputs.HELM_VALUES_PATH }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
       PAT: ${{ secrets.PAT }}
 
   # Update configmap after deployment
@@ -446,7 +449,7 @@ jobs:
       REACT_APP: ${{ inputs.REACT_APP }}
       ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-config.outputs.env_file_explicit == 'true' }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
 
   # Update configmap only (when only env file changed)
   update-configmap-only:
@@ -469,4 +472,4 @@ jobs:
       REACT_APP: ${{ inputs.REACT_APP }}
       ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-config.outputs.env_file_explicit == 'true' }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}

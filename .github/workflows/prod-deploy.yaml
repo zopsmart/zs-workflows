@@ -97,8 +97,11 @@ on:
       REGISTRY_CREDENTIALS:
         description: 'Registry auth credentials (auto-detected: GCP SA JSON, AWS JSON, Azure JSON, or password/token)'
         required: false
+      PROD_CLUSTER_CREDENTIALS:
+        description: 'Prod cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        required: false
       CLUSTER_CREDENTIALS:
-        description: 'Cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        description: 'Fallback cluster auth credentials (used if PROD_CLUSTER_CREDENTIALS not provided)'
         required: false
       # Legacy support
       GAR_KEY:
@@ -285,7 +288,7 @@ jobs:
       HELM_VALUES_PATH: ${{ inputs.HELM_VALUES_PATH }}
       APP_VERSION: ${{ needs.resolve-config.outputs.release_version }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
       PAT: ${{ secrets.PAT }}
 
   # Update configmap
@@ -310,4 +313,4 @@ jobs:
       REACT_APP: ${{ inputs.REACT_APP }}
       ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-config.outputs.env_file_explicit == 'true' }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
