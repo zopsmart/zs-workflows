@@ -20,11 +20,6 @@ on:
         description: 'Kubernetes namespace'
         required: true
         type: string
-      CLUSTER_AUTH_METHOD:
-        description: 'Cluster auth method: gke, eks, aks, kubeconfig'
-        required: false
-        type: string
-        default: 'kubeconfig'
       # GKE inputs
       CLUSTER_PROJECT:
         description: 'GCP project for cluster (for GKE)'
@@ -120,25 +115,32 @@ jobs:
         id: detect
         run: |
           CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
-          AUTH_METHOD="${{ inputs.CLUSTER_AUTH_METHOD }}"
 
-          # Detect credential type
-          detected_type=""
+          # Detect auth method from credentials and inputs
+          AUTH_METHOD=""
+
+          # 1. Check JSON credential format
           if echo "$CREDS" | jq -e '.type == "service_account"' > /dev/null 2>&1; then
-            detected_type="gke"
+            AUTH_METHOD="gke"
           elif echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
-            detected_type="eks"
+            AUTH_METHOD="eks"
           elif echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
-            detected_type="aks"
+            AUTH_METHOD="aks"
           elif echo "$CREDS" | base64 -d 2>/dev/null | grep -q "kind: Config"; then
-            detected_type="kubeconfig"
-          else
-            detected_type="$AUTH_METHOD"
+            AUTH_METHOD="kubeconfig"
           fi
 
-          # Use detected type if AUTH_METHOD is kubeconfig (default)
-          if [[ "$AUTH_METHOD" == "kubeconfig" && "$detected_type" != "kubeconfig" ]]; then
-            AUTH_METHOD="$detected_type"
+          # 2. Infer from inputs/vars/secrets if not detected from JSON
+          if [[ -z "$AUTH_METHOD" ]]; then
+            if [[ -n "${{ inputs.AWS_ACCESS_KEY_ID }}" || -n "${{ vars.AWS_ACCESS_KEY_ID }}" || -n "${{ secrets.AWS_ACCESS_KEY_ID }}" || -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+              AUTH_METHOD="eks"
+            elif [[ -n "${{ inputs.AZURE_CLIENT_ID }}" || -n "${{ vars.AZURE_CLIENT_ID }}" || -n "${{ secrets.AZURE_CLIENT_ID }}" || -n "${{ secrets.AZURE_CLIENT_SECRET }}" ]]; then
+              AUTH_METHOD="aks"
+            elif [[ -n "${{ inputs.CLUSTER_PROJECT }}" || -n "${{ vars.CLUSTER_PROJECT }}" ]]; then
+              AUTH_METHOD="gke"
+            else
+              AUTH_METHOD="kubeconfig"
+            fi
           fi
 
           echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"

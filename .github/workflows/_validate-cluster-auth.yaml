@@ -3,11 +3,6 @@ name: "Validate Cluster Auth"
 on:
   workflow_call:
     inputs:
-      CLUSTER_AUTH_METHOD:
-        description: 'Explicit auth method: gke, eks, aks, kubeconfig (auto-detected from credentials if not specified)'
-        required: false
-        type: string
-        default: ''
       # GKE inputs
       CLUSTER_PROJECT:
         description: 'GCP project (for GKE)'
@@ -142,10 +137,11 @@ jobs:
           errors=""
 
           # ---------------------------------------------------------
-          # Auto-detect auth method from credential format
-          # Falls back to CLUSTER_AUTH_METHOD input if auto-detection fails
+          # Auto-detect auth method from credentials and inputs
           # ---------------------------------------------------------
           AUTH_METHOD=""
+
+          # 1. Check JSON credential format
           if [[ "${{ steps.retrieve.outputs.json_gcp_type }}" == "service_account" ]]; then
             AUTH_METHOD="gke"
           elif [[ -n "${{ steps.retrieve.outputs.json_aws_secret_access_key }}" ]]; then
@@ -154,12 +150,21 @@ jobs:
             AUTH_METHOD="aks"
           elif [[ "${{ steps.retrieve.outputs.is_kubeconfig }}" == "true" ]]; then
             AUTH_METHOD="kubeconfig"
-          elif [[ -n "${{ inputs.CLUSTER_AUTH_METHOD }}" ]]; then
-            # Use explicit input when auto-detection fails (e.g., raw secret credentials)
-            AUTH_METHOD="${{ inputs.CLUSTER_AUTH_METHOD }}"
-          else
-            errors+="Unable to detect auth method. Provide CLUSTER_AUTH_METHOD or use full JSON credentials\n"
           fi
+
+          # 2. Infer from inputs/vars/secrets if not detected from JSON
+          if [[ -z "$AUTH_METHOD" ]]; then
+            if [[ -n "${{ inputs.AWS_ACCESS_KEY_ID }}" || -n "${{ vars.AWS_ACCESS_KEY_ID }}" || -n "${{ secrets.AWS_ACCESS_KEY_ID }}" || -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+              AUTH_METHOD="eks"
+            elif [[ -n "${{ inputs.AZURE_CLIENT_ID }}" || -n "${{ vars.AZURE_CLIENT_ID }}" || -n "${{ secrets.AZURE_CLIENT_ID }}" || -n "${{ secrets.AZURE_CLIENT_SECRET }}" ]]; then
+              AUTH_METHOD="aks"
+            elif [[ -n "${{ inputs.CLUSTER_PROJECT }}" || -n "${{ vars.CLUSTER_PROJECT }}" ]]; then
+              AUTH_METHOD="gke"
+            else
+              AUTH_METHOD="kubeconfig"
+            fi
+          fi
+
           echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"
 
           # ---------------------------------------------------------
