@@ -6,15 +6,15 @@ inputs:
     description: 'Registry provider: gar, gcr, ecr, acr, dockerhub, ghcr, custom'
     required: true
   image_registry:
-    description: 'Registry URL (auto-set for gcr/dockerhub/ghcr)'
+    description: 'Registry URL. Required for gar/ecr/acr/custom. Auto-defaults for gcr (gcr.io), dockerhub (docker.io), ghcr (ghcr.io)'
     required: false
     default: ''
   registry_project:
-    description: 'Project/account/namespace within registry'
+    description: 'Project/account/namespace within registry. Used to construct image path: REGISTRY/PROJECT/REPO/SVC:TAG'
     required: false
     default: ''
   registry_repo:
-    description: 'Repository name within project'
+    description: 'Repository name within project. Used to construct image path: REGISTRY/PROJECT/REPO/SVC:TAG'
     required: false
     default: ''
   svc_name:
@@ -32,37 +32,37 @@ inputs:
     required: false
     default: ''
   registry_credentials:
-    description: 'Registry credentials (GCP SA JSON, AWS JSON, Azure JSON, or password/token)'
+    description: 'Registry auth. Required for all types. Format: GCP SA JSON (gar/gcr), AWS JSON (ecr), Azure JSON (acr), password/token (dockerhub/ghcr/custom)'
     required: false
     default: ''
   registry_username:
-    description: 'Username for Docker Hub/GHCR/custom registry login (defaults to github_actor)'
+    description: 'Username. Required for dockerhub/ghcr/custom (defaults to github_actor)'
     required: false
     default: ''
   # ECR-specific
   aws_access_key_id:
-    description: 'AWS access key ID (for ECR, fallback if not in JSON credentials)'
+    description: 'AWS access key ID. Required for ECR (via input or registry_credentials JSON)'
     required: false
     default: ''
   aws_region:
-    description: 'AWS region (for ECR, defaults to us-east-1)'
+    description: 'AWS region for ECR. Auto-extracted from IMAGE_REGISTRY URL if not provided'
     required: false
-    default: 'us-east-1'
+    default: ''
   # ACR-specific
   azure_client_id:
-    description: 'Azure service principal client ID (for ACR, fallback if not in JSON credentials)'
+    description: 'Azure client ID. Required for ACR (via input or registry_credentials JSON)'
     required: false
     default: ''
   azure_tenant_id:
-    description: 'Azure tenant ID (for ACR, fallback if not in JSON credentials)'
+    description: 'Azure tenant ID. Required for ACR (via input or registry_credentials JSON)'
     required: false
     default: ''
   github_actor:
-    description: 'GitHub actor (used as fallback for registry_username)'
+    description: 'GitHub actor. Used as fallback for registry_username in dockerhub/ghcr/custom'
     required: false
     default: ''
   github_token:
-    description: 'GitHub token for GHCR fallback'
+    description: 'GitHub token. Fallback for registry_credentials in GHCR'
     required: false
     default: ''
 
@@ -187,7 +187,8 @@ runs:
 
         # ---------------------------------------------------------
         # ECR (AWS)
-        # Required: aws_secret_access_key, aws_access_key_id, aws_region
+        # Required: aws_secret_access_key, aws_access_key_id
+        # Region: extracted from IMAGE_REGISTRY URL or input
         # ---------------------------------------------------------
         elif [[ "$REGISTRY_TYPE" == "ecr" ]]; then
           # -- Secret (required): JSON -> plain credential --
@@ -200,9 +201,15 @@ runs:
           [[ -z "$KEY_ID" ]] && KEY_ID="${{ steps.retrieve.outputs.json_aws_access_key_id }}"
           [[ -z "$KEY_ID" ]] && errors+="aws_access_key_id is required (as input or in JSON)\n"
 
-          # -- Region: input -> JSON -> default --
-          REGION="${{ inputs.aws_region }}"
-          [[ -z "$REGION" || "$REGION" == "us-east-1" ]] && [[ -n "${{ steps.retrieve.outputs.json_aws_region }}" ]] && REGION="${{ steps.retrieve.outputs.json_aws_region }}"
+          # -- Region: extract from IMAGE_REGISTRY URL -> input -> JSON -> default --
+          # ECR URL format: <account>.dkr.ecr.<region>.amazonaws.com
+          REGION=""
+          IMAGE_REG="${{ inputs.image_registry }}"
+          if [[ "$IMAGE_REG" =~ \.ecr\.([a-z0-9-]+)\.amazonaws\.com ]]; then
+            REGION="${BASH_REMATCH[1]}"
+          fi
+          [[ -z "$REGION" ]] && REGION="${{ inputs.aws_region }}"
+          [[ -z "$REGION" ]] && REGION="${{ steps.retrieve.outputs.json_aws_region }}"
           [[ -z "$REGION" ]] && REGION="us-east-1"
 
           echo "aws_secret_access_key=$SECRET" >> "$GITHUB_OUTPUT"

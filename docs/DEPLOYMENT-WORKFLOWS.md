@@ -264,16 +264,16 @@ Set these in your repository's Settings > Secrets and variables > Actions > Vari
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `REGISTRY_TYPE` | Registry provider | `gar`, `ecr`, `ghcr` |
-| `IMAGE_REGISTRY` | Registry URL | `us-docker.pkg.dev` |
-| `REGISTRY_PROJECT` | Project/namespace | `my-gcp-project` |
-| `REGISTRY_REPO` | Repository name | `docker-registry` |
-| `CLUSTER_PROJECT` | GCP project (GKE) | `my-gcp-project` |
-| `CLUSTER_NAME` | Cluster name | `my-cluster` |
-| `CLUSTER_REGION` | Cluster region | `us-central1` |
-| `AWS_REGION` | AWS region (EKS) | `us-east-1` |
-| `AZURE_RESOURCE_GROUP` | Azure RG (AKS) | `my-resource-group` |
-| `APP_NAME` | Application name | `my-service` |
+| `REGISTRY_TYPE` | Registry provider. Auto-detected from IMAGE_REGISTRY URL. Only needed for gcr/ghcr/dockerhub | `gar`, `ecr`, `ghcr` |
+| `IMAGE_REGISTRY` | Registry URL. REGISTRY_TYPE auto-detected from URL pattern | `us-docker.pkg.dev` |
+| `REGISTRY_PROJECT` | Project/namespace. Used for image path construction | `my-gcp-project` |
+| `REGISTRY_REPO` | Repository name. Used for image path construction | `docker-registry` |
+| `CLUSTER_PROJECT` | GCP project. **Required for GKE auth** | `my-gcp-project` |
+| `CLUSTER_NAME` | Cluster name. **Required for GKE/EKS/AKS auth** | `my-cluster` |
+| `CLUSTER_REGION` | Cluster region. **Required for GKE/EKS auth** (default: us-central1). Also checks `vars.AWS_REGION` as fallback | `us-central1` |
+| `AWS_REGION` | Legacy: Fallback for `CLUSTER_REGION` when using EKS | `us-east-1` |
+| `AZURE_RESOURCE_GROUP` | Azure RG. **Required for AKS auth** | `my-resource-group` |
+| `APP_NAME` | Application name. Used as fallback for namespace and repo | `my-service` |
 | `STAGE_NAMESPACE` | Staging namespace | `my-app-stage` |
 | `PROD_NAMESPACE` | Production namespace | `my-app` |
 
@@ -319,6 +319,25 @@ The cluster auth method is automatically detected (no input required):
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+## Registry Type Auto-Detection
+
+`REGISTRY_TYPE` is automatically detected from `IMAGE_REGISTRY` URL patterns:
+
+| IMAGE_REGISTRY Pattern | Detected Type |
+|------------------------|---------------|
+| `*.dkr.ecr.*.amazonaws.com` | `ecr` |
+| `*.azurecr.io` | `acr` |
+| `*-docker.pkg.dev` | `gar` |
+| `gcr.io`, `*.gcr.io` | `gcr` |
+| `ghcr.io` | `ghcr` |
+| `docker.io`, `registry.hub.docker.com` | `dockerhub` |
+| Other | `custom` |
+
+**Usage:**
+- Provide just `IMAGE_REGISTRY` and the type is auto-detected
+- For `gcr`, `ghcr`, `dockerhub`: can provide just `REGISTRY_TYPE` (URL defaults automatically)
+- If both provided: they must be consistent or workflow errors
+
 ## Image Path Construction
 
 The image path is constructed based on which components are provided:
@@ -346,6 +365,17 @@ IMAGE_REGISTRY / REGISTRY_PROJECT / REGISTRY_REPO / SVC_NAME : TAG
 
 ## Workflow Inputs Reference
 
+### Required Field Types
+
+Fields can be required in different ways:
+
+| Requirement Type | Meaning |
+|-----------------|---------|
+| **Yes** | Must be provided as workflow input |
+| **Yes*** | Required, but can be set via workflow input OR repository variable (`vars.*`). Workflow errors if neither is provided |
+| **Conditional** | Required only when using specific providers (e.g., `IMAGE_REGISTRY` is required for gar/ecr/acr/custom but auto-defaults for gcr/dockerhub/ghcr) |
+| **No** | Optional, uses default or falls back to repository variable |
+
 ### stage-deploy.yaml
 
 | Input | Required | Default | Description |
@@ -353,15 +383,14 @@ IMAGE_REGISTRY / REGISTRY_PROJECT / REGISTRY_REPO / SVC_NAME : TAG
 | `SVC_NAME` | Yes | | Service name |
 | `BUILD_COMMAND` | Yes | | Build command |
 | `LANGUAGE` | No | Auto-detected | `go` or `node` (auto-detected from BUILD_COMMAND) |
-| `REGISTRY_TYPE` | No | `vars.REGISTRY_TYPE` | Registry provider |
-| `IMAGE_REGISTRY` | No | Auto | Registry URL |
-| `REGISTRY_PROJECT` | No | `vars.REGISTRY_PROJECT` | Project/namespace |
-| `REGISTRY_REPO` | No | `vars.REGISTRY_REPO` | Repository name |
-| `CLUSTER_PROJECT` | No | `vars.CLUSTER_PROJECT` | GCP project (GKE) |
-| `CLUSTER_NAME` | No | `vars.CLUSTER_NAME` | Cluster name |
-| `CLUSTER_REGION` | No | `us-central1` | Cluster region |
-| `AWS_REGION` | No | `vars.AWS_REGION` | AWS region (EKS) |
-| `AZURE_RESOURCE_GROUP` | No | `vars.AZURE_RESOURCE_GROUP` | Azure RG (AKS) |
+| `REGISTRY_TYPE` | Auto | `vars.REGISTRY_TYPE` | Registry provider. **Auto-detected from IMAGE_REGISTRY URL**. Only needed for gcr/ghcr/dockerhub without explicit URL |
+| `IMAGE_REGISTRY` | Conditional | `vars.IMAGE_REGISTRY` | Registry URL. REGISTRY_TYPE auto-detected from URL pattern. **Required for gar/ecr/acr/custom** |
+| `REGISTRY_PROJECT` | No | `vars.REGISTRY_PROJECT` | Project/namespace. Used for image path construction |
+| `REGISTRY_REPO` | No | `vars.REGISTRY_REPO` | Repository name. Used for image path construction |
+| `CLUSTER_PROJECT` | Conditional | `vars.CLUSTER_PROJECT` | GCP project. **Required for GKE auth** |
+| `CLUSTER_NAME` | Conditional | `vars.CLUSTER_NAME` | Cluster name. **Required for GKE/EKS/AKS auth** |
+| `CLUSTER_REGION` | Conditional | `us-central1` | Cluster region. **Required for GKE/EKS auth**. Falls back to `vars.CLUSTER_REGION`, then `vars.AWS_REGION` |
+| `AZURE_RESOURCE_GROUP` | Conditional | `vars.AZURE_RESOURCE_GROUP` | Azure RG. **Required for AKS auth** |
 | `NAMESPACE` | No | `{APP_NAME}-stage` | Kubernetes namespace |
 | `TYPE` | No | `deployment` | `deployment` or `cron` |
 | `DEPLOY_METHOD` | No | `kubectl` | `kubectl` or `helm` |
@@ -376,15 +405,14 @@ IMAGE_REGISTRY / REGISTRY_PROJECT / REGISTRY_REPO / SVC_NAME : TAG
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `SVC_NAME` | Yes | | Service name |
-| `REGISTRY_TYPE` | No | `vars.REGISTRY_TYPE` | Registry provider |
-| `IMAGE_REGISTRY` | No | Auto | Registry URL |
-| `REGISTRY_PROJECT` | No | `vars.REGISTRY_PROJECT` | Project/namespace |
-| `REGISTRY_REPO` | No | `vars.REGISTRY_REPO` | Repository name |
-| `CLUSTER_PROJECT` | No | `vars.CLUSTER_PROJECT` | GCP project (GKE) |
-| `CLUSTER_NAME` | No | `vars.CLUSTER_NAME` | Cluster name |
-| `CLUSTER_REGION` | No | `us-central1` | Cluster region |
-| `AWS_REGION` | No | `vars.AWS_REGION` | AWS region (EKS) |
-| `AZURE_RESOURCE_GROUP` | No | `vars.AZURE_RESOURCE_GROUP` | Azure RG (AKS) |
+| `REGISTRY_TYPE` | Auto | `vars.REGISTRY_TYPE` | Registry provider. **Auto-detected from IMAGE_REGISTRY URL**. Only needed for gcr/ghcr/dockerhub without explicit URL |
+| `IMAGE_REGISTRY` | Conditional | `vars.IMAGE_REGISTRY` | Registry URL. REGISTRY_TYPE auto-detected from URL pattern. **Required for gar/ecr/acr/custom** |
+| `REGISTRY_PROJECT` | No | `vars.REGISTRY_PROJECT` | Project/namespace. Used for image path construction |
+| `REGISTRY_REPO` | No | `vars.REGISTRY_REPO` | Repository name. Used for image path construction |
+| `CLUSTER_PROJECT` | Conditional | `vars.CLUSTER_PROJECT` | GCP project. **Required for GKE auth** |
+| `CLUSTER_NAME` | Conditional | `vars.CLUSTER_NAME` | Cluster name. **Required for GKE/EKS/AKS auth** |
+| `CLUSTER_REGION` | Conditional | `us-central1` | Cluster region. **Required for GKE/EKS auth**. Falls back to `vars.CLUSTER_REGION`, then `vars.AWS_REGION` |
+| `AZURE_RESOURCE_GROUP` | Conditional | `vars.AZURE_RESOURCE_GROUP` | Azure RG. **Required for AKS auth** |
 | `NAMESPACE` | No | `{APP_NAME}` | Kubernetes namespace |
 | `TYPE` | No | `deployment` | `deployment` or `cron` |
 | `DEPLOY_METHOD` | No | `kubectl` | `kubectl` or `helm` |
@@ -459,18 +487,18 @@ The new workflows support legacy variable/secret names via fallback:
 - `REGISTRY_PROJECT` falls back to `vars.GAR_PROJECT`
 - `REGISTRY_REPO` falls back to `vars.GAR_REGISTRY`
 
-To migrate, simply add `REGISTRY_TYPE` to your repository variables:
+To migrate, you **must** add `REGISTRY_TYPE` to your repository variables (it's required):
 
 ```bash
-# Add to repository variables
+# Add to repository variables (REQUIRED)
 REGISTRY_TYPE=gar
 ```
 
 ### Full Migration Steps
 
-1. **Add new repository variable:**
+1. **Add required repository variable:**
    ```
-   REGISTRY_TYPE=gar
+   REGISTRY_TYPE=gar  # REQUIRED - workflow will fail without this
    ```
 
 2. **Optionally rename variables** (not required due to fallback):

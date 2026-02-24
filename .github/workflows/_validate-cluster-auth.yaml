@@ -3,46 +3,46 @@ name: "Validate Cluster Auth"
 on:
   workflow_call:
     inputs:
-      # GKE inputs
+      # GKE inputs (required when using GKE)
       CLUSTER_PROJECT:
-        description: 'GCP project (for GKE)'
+        description: 'GCP project. Required for GKE auth'
         required: false
         type: string
         default: ''
       CLUSTER_NAME:
-        description: 'Kubernetes cluster name'
+        description: 'Kubernetes cluster name. Required for GKE/EKS/AKS auth'
         required: false
         type: string
         default: ''
       CLUSTER_REGION:
-        description: 'Cluster region (for GKE/EKS)'
+        description: 'Cluster region. Required for GKE auth'
         required: false
         type: string
         default: ''
-      # EKS inputs
+      # EKS inputs (required when using EKS)
       AWS_ACCESS_KEY_ID:
-        description: 'AWS access key ID (for EKS, fallback if not in JSON credentials)'
+        description: 'AWS access key ID. Required for EKS (via input, CLUSTER_CREDENTIALS JSON, vars, or secrets)'
         required: false
         type: string
         default: ''
       AWS_REGION:
-        description: 'AWS region (for EKS)'
+        description: 'AWS region. Required for EKS (via input, CLUSTER_CREDENTIALS JSON, vars, or CLUSTER_REGION)'
         required: false
         type: string
         default: ''
-      # AKS inputs
+      # AKS inputs (required when using AKS)
       AZURE_CLIENT_ID:
-        description: 'Azure client ID (for AKS, fallback if not in JSON credentials)'
+        description: 'Azure client ID. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or secrets)'
         required: false
         type: string
         default: ''
       AZURE_TENANT_ID:
-        description: 'Azure tenant ID (for AKS, fallback if not in JSON credentials)'
+        description: 'Azure tenant ID. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or secrets)'
         required: false
         type: string
         default: ''
       AZURE_RESOURCE_GROUP:
-        description: 'Azure resource group (for AKS)'
+        description: 'Azure resource group. Required for AKS auth'
         required: false
         type: string
         default: ''
@@ -57,22 +57,22 @@ on:
 
     secrets:
       CLUSTER_CREDENTIALS:
-        description: 'GCP SA key, AWS JSON, Azure JSON, base64 kubeconfig, or raw secret'
+        description: 'Cluster auth credentials. Auto-detected format: GCP SA JSON, AWS JSON, Azure JSON, base64 kubeconfig, or raw secret'
         required: true
       AWS_SECRET_ACCESS_KEY:
-        description: 'AWS secret access key (for EKS, fallback if not in CLUSTER_CREDENTIALS)'
+        description: 'AWS secret access key. Required for EKS (via CLUSTER_CREDENTIALS JSON/raw or this secret)'
         required: false
       AWS_ACCESS_KEY_ID:
-        description: 'AWS access key ID as secret (for EKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        description: 'AWS access key ID as secret. Required for EKS (via input, CLUSTER_CREDENTIALS JSON, vars, or this secret)'
         required: false
       AZURE_CLIENT_SECRET:
-        description: 'Azure client secret (for AKS, fallback if not in CLUSTER_CREDENTIALS)'
+        description: 'Azure client secret. Required for AKS (via CLUSTER_CREDENTIALS JSON/raw or this secret)'
         required: false
       AZURE_CLIENT_ID:
-        description: 'Azure client ID as secret (for AKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        description: 'Azure client ID as secret. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or this secret)'
         required: false
       AZURE_TENANT_ID:
-        description: 'Azure tenant ID as secret (for AKS, fallback if not in CLUSTER_CREDENTIALS or input)'
+        description: 'Azure tenant ID as secret. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or this secret)'
         required: false
 
 jobs:
