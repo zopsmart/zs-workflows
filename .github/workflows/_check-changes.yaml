@@ -1,0 +1,74 @@
+name: "Check Changes"
+
+on:
+  workflow_call:
+    inputs:
+      ENV_FILE_PATH:
+        description: 'Path to env file for configmap detection. Empty string skips configmap detection.'
+        required: false
+        type: string
+        default: ''
+
+    outputs:
+      deployment:
+        description: 'True if non-env files changed (code changes)'
+        value: ${{ jobs.check.outputs.deployment }}
+      configmap:
+        description: 'True if env file changed'
+        value: ${{ jobs.check.outputs.configmap }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Check Changes
+    outputs:
+      deployment: ${{ steps.check.outputs.deployment }}
+      configmap: ${{ steps.check.outputs.configmap }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Find Modified Files
+        id: files
+        uses: masesgroup/retrieve-changed-files@v2
+
+      - name: Check modified files
+        id: check
+        run: |
+          ENV_FILE_PATH="${{ inputs.ENV_FILE_PATH }}"
+
+          # Initialize outputs
+          deployment=false
+          configmap=false
+
+          # Normalize env file path (remove leading ./ or /)
+          env_file_normalized=""
+          if [[ -n "$ENV_FILE_PATH" ]]; then
+            env_file_normalized="${ENV_FILE_PATH#./}"
+            env_file_normalized="${env_file_normalized#/}"
+          fi
+
+          # Check each modified file
+          for file in ${{ steps.files.outputs.all }}; do
+            # Normalize the file path for comparison
+            file_normalized="${file#./}"
+            file_normalized="${file_normalized#/}"
+
+            if [[ -n "$env_file_normalized" && "$file_normalized" == "$env_file_normalized" ]]; then
+              # This file is the env file
+              configmap=true
+            else
+              # This file is not the env file (code change)
+              deployment=true
+            fi
+          done
+
+          echo "deployment=$deployment"
+          echo "configmap=$configmap"
+
+          echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
+          echo "configmap=$configmap" >> "$GITHUB_OUTPUT"
+        shell: bash

@@ -1,0 +1,261 @@
+name: "Update Configmap"
+
+on:
+  workflow_call:
+    inputs:
+      SVC_NAME:
+        description: 'Service name (configmap name)'
+        required: true
+        type: string
+      NAMESPACE:
+        description: 'Kubernetes namespace'
+        required: true
+        type: string
+      ENV_FILE_PATH:
+        description: 'Path to env file'
+        required: true
+        type: string
+      CLUSTER_AUTH_METHOD:
+        description: 'Cluster auth method: gke, eks, aks, kubeconfig'
+        required: false
+        type: string
+        default: 'kubeconfig'
+      # GKE inputs
+      CLUSTER_PROJECT:
+        description: 'GCP project for cluster (for GKE)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_NAME:
+        description: 'Kubernetes cluster name'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_REGION:
+        description: 'Cluster region'
+        required: false
+        type: string
+        default: 'us-central1'
+      # EKS inputs
+      AWS_REGION:
+        description: 'AWS region (for EKS)'
+        required: false
+        type: string
+        default: ''
+      # AKS inputs
+      AZURE_RESOURCE_GROUP:
+        description: 'Azure resource group (for AKS)'
+        required: false
+        type: string
+        default: ''
+      REACT_APP:
+        description: 'Enable React-specific configmap format'
+        required: false
+        type: boolean
+        default: false
+      ENV_FILE_PATH_EXPLICIT:
+        description: 'If true, fail when env file is missing. If false, skip silently.'
+        required: false
+        type: boolean
+        default: false
+
+    secrets:
+      CLUSTER_CREDENTIALS:
+        description: 'Cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        required: true
+
+jobs:
+  update_configmap:
+    runs-on: ubuntu-latest
+    name: Update Configmap
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Validate env file exists
+        id: validate
+        run: |
+          ENV_FILE_PATH="${{ inputs.ENV_FILE_PATH }}"
+          EXPLICIT="${{ inputs.ENV_FILE_PATH_EXPLICIT }}"
+
+          if [[ -z "$ENV_FILE_PATH" ]]; then
+            echo "ENV_FILE_PATH is empty, skipping configmap update"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ ! -f "$ENV_FILE_PATH" ]]; then
+            if [[ "$EXPLICIT" == "true" ]]; then
+              echo "ERROR: Env file not found at $ENV_FILE_PATH"
+              echo "When ENV_FILE_PATH is explicitly set, the file must exist."
+              exit 1
+            else
+              echo "Env file not found at $ENV_FILE_PATH, skipping configmap update"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Detect credential type
+        id: detect
+        if: steps.validate.outputs.skip != 'true'
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+          AUTH_METHOD="${{ inputs.CLUSTER_AUTH_METHOD }}"
+
+          # Detect credential type
+          detected_type=""
+          if echo "$CREDS" | jq -e '.type == "service_account"' > /dev/null 2>&1; then
+            detected_type="gke"
+          elif echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
+            detected_type="eks"
+          elif echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
+            detected_type="aks"
+          elif echo "$CREDS" | base64 -d 2>/dev/null | grep -q "kind: Config"; then
+            detected_type="kubeconfig"
+          else
+            detected_type="$AUTH_METHOD"
+          fi
+
+          # Use detected type if AUTH_METHOD is kubeconfig (default)
+          if [[ "$AUTH_METHOD" == "kubeconfig" && "$detected_type" != "kubeconfig" ]]; then
+            AUTH_METHOD="$detected_type"
+          fi
+
+          echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # Auth to GKE
+      - name: Auth to GKE
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'gke'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.CLUSTER_CREDENTIALS }}
+
+      - name: Setup gcloud CLI
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'gke'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Get GKE credentials
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'gke'
+        run: |
+          gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} \
+            --region=${{ inputs.CLUSTER_REGION }} \
+            --project=${{ inputs.CLUSTER_PROJECT }}
+
+      # Auth to EKS
+      - name: Configure AWS credentials for EKS
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'eks'
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+
+          if echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
+            AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.aws_access_key_id')
+            AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.aws_secret_access_key')
+          else
+            echo "ERROR: CLUSTER_CREDENTIALS must be JSON with aws_access_key_id and aws_secret_access_key"
+            exit 1
+          fi
+
+          AWS_REGION="${{ inputs.AWS_REGION }}"
+          [[ -z "$AWS_REGION" ]] && AWS_REGION="${{ inputs.CLUSTER_REGION }}"
+
+          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+          aws configure set region "$AWS_REGION"
+
+          echo "aws_region=$AWS_REGION" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Get EKS credentials
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'eks'
+        run: |
+          aws eks update-kubeconfig --name ${{ inputs.CLUSTER_NAME }} --region ${{ env.aws_region }}
+
+      # Auth to AKS
+      - name: Azure Login for AKS
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'aks'
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+
+          if echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
+            CLIENT_ID=$(echo "$CREDS" | jq -r '.clientId')
+            CLIENT_SECRET=$(echo "$CREDS" | jq -r '.clientSecret')
+            TENANT_ID=$(echo "$CREDS" | jq -r '.tenantId')
+          else
+            echo "ERROR: CLUSTER_CREDENTIALS must be JSON with clientId, clientSecret, and tenantId"
+            exit 1
+          fi
+
+          az login --service-principal -u "$CLIENT_ID" -p "$CLIENT_SECRET" --tenant "$TENANT_ID"
+        shell: bash
+
+      - name: Get AKS credentials
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'aks'
+        run: |
+          az aks get-credentials --name ${{ inputs.CLUSTER_NAME }} \
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
+
+      # Auth via kubeconfig
+      - name: Setup kubeconfig
+        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'kubeconfig'
+        run: |
+          mkdir -p ~/.kube
+          echo '${{ secrets.CLUSTER_CREDENTIALS }}' | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Generate ConfigMap YAML
+        if: steps.validate.outputs.skip != 'true'
+        run: |
+          CONFIG_MAP_NAME="${{ inputs.SVC_NAME }}"
+          ENV_FILE_PATH="${{ inputs.ENV_FILE_PATH }}"
+          REACT_APP="${{ inputs.REACT_APP }}"
+
+          # Create an associative array to store key-value pairs
+          declare -A envArray
+
+          # Read each line in .env and extract key-value pairs
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip empty lines and comments
+            if [[ -z "$line" || "${line:0:1}" == "#" ]]; then
+              continue
+            fi
+            key=$(echo "$line" | cut -d '=' -f 1)
+            value=$(echo "$line" | cut -d '=' -f 2-)
+            envArray["$key"]=$value
+          done < "$ENV_FILE_PATH"
+
+          # Create ConfigMap YAML header
+          echo "apiVersion: v1" > "${CONFIG_MAP_NAME}.yaml"
+          echo "kind: ConfigMap" >> "${CONFIG_MAP_NAME}.yaml"
+          echo "metadata:" >> "${CONFIG_MAP_NAME}.yaml"
+          echo "  name: ${CONFIG_MAP_NAME}" >> "${CONFIG_MAP_NAME}.yaml"
+          echo "data:" >> "${CONFIG_MAP_NAME}.yaml"
+
+          if [[ "$REACT_APP" == "true" ]]; then
+            # React app format: environment.js with window.env object
+            echo "  environment.js: |" >> "${CONFIG_MAP_NAME}.yaml"
+            echo "    if (typeof window !== 'undefined')" >> "${CONFIG_MAP_NAME}.yaml"
+            echo "    window.env = {" >> "${CONFIG_MAP_NAME}.yaml"
+            for key in "${!envArray[@]}"; do
+              echo "      $key: \"${envArray[$key]}\"," >> "${CONFIG_MAP_NAME}.yaml"
+            done
+            echo "    }" >> "${CONFIG_MAP_NAME}.yaml"
+          else
+            # Standard configmap format
+            for key in "${!envArray[@]}"; do
+              echo "  $key: ${envArray[$key]}" >> "${CONFIG_MAP_NAME}.yaml"
+            done
+          fi
+
+          echo "Generated ConfigMap:"
+          cat "${CONFIG_MAP_NAME}.yaml"
+        shell: bash
+
+      - name: Apply ConfigMap
+        if: steps.validate.outputs.skip != 'true'
+        run: kubectl apply --force -f ${{ inputs.SVC_NAME }}.yaml -n ${{ inputs.NAMESPACE }}

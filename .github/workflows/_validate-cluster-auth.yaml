@@ -1,0 +1,313 @@
+name: "Validate Cluster Auth"
+
+on:
+  workflow_call:
+    inputs:
+      # GKE inputs
+      CLUSTER_PROJECT:
+        description: 'GCP project (for GKE)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_NAME:
+        description: 'Kubernetes cluster name'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_REGION:
+        description: 'Cluster region (for GKE/EKS)'
+        required: false
+        type: string
+        default: ''
+      # EKS inputs
+      AWS_ACCESS_KEY_ID:
+        description: 'AWS access key ID (for EKS, fallback if not in JSON credentials)'
+        required: false
+        type: string
+        default: ''
+      AWS_REGION:
+        description: 'AWS region (for EKS)'
+        required: false
+        type: string
+        default: ''
+      # AKS inputs
+      AZURE_CLIENT_ID:
+        description: 'Azure client ID (for AKS, fallback if not in JSON credentials)'
+        required: false
+        type: string
+        default: ''
+      AZURE_TENANT_ID:
+        description: 'Azure tenant ID (for AKS, fallback if not in JSON credentials)'
+        required: false
+        type: string
+        default: ''
+      AZURE_RESOURCE_GROUP:
+        description: 'Azure resource group (for AKS)'
+        required: false
+        type: string
+        default: ''
+
+    outputs:
+      validated:
+        description: 'True if validation passed'
+        value: ${{ jobs.validate.outputs.validated }}
+      kubeconfig_artifact:
+        description: 'Artifact name containing kubeconfig'
+        value: ${{ jobs.validate.outputs.kubeconfig_artifact }}
+
+    secrets:
+      CLUSTER_CREDENTIALS:
+        description: 'Auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig'
+        required: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Cluster Auth
+    outputs:
+      validated: ${{ steps.validate.outputs.validated }}
+      kubeconfig_artifact: ${{ steps.artifact.outputs.name }}
+
+    steps:
+      # ============================================================
+      # PHASE 1: RETRIEVAL
+      # Extract all possible values from credentials
+      # ============================================================
+      - name: Retrieve credentials
+        id: retrieve
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+
+          # ---------------------------------------------------------
+          # Attempt to parse credentials as JSON
+          # ---------------------------------------------------------
+          if echo "$CREDS" | jq -e '.' > /dev/null 2>&1; then
+            echo "is_json=true" >> "$GITHUB_OUTPUT"
+
+            # -- GCP fields (GKE) --
+            echo "json_gcp_type=$(echo "$CREDS" | jq -r '.type // empty')" >> "$GITHUB_OUTPUT"
+
+            # -- AWS fields (EKS) --
+            echo "json_aws_access_key_id=$(echo "$CREDS" | jq -r '.aws_access_key_id // empty')" >> "$GITHUB_OUTPUT"
+            echo "json_aws_secret_access_key=$(echo "$CREDS" | jq -r '.aws_secret_access_key // empty')" >> "$GITHUB_OUTPUT"
+            echo "json_aws_region=$(echo "$CREDS" | jq -r '.aws_region // empty')" >> "$GITHUB_OUTPUT"
+
+            # -- Azure fields (AKS) --
+            echo "json_client_id=$(echo "$CREDS" | jq -r '.clientId // empty')" >> "$GITHUB_OUTPUT"
+            echo "json_client_secret=$(echo "$CREDS" | jq -r '.clientSecret // empty')" >> "$GITHUB_OUTPUT"
+            echo "json_tenant_id=$(echo "$CREDS" | jq -r '.tenantId // empty')" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_json=false" >> "$GITHUB_OUTPUT"
+
+            # ---------------------------------------------------------
+            # Check if base64-encoded kubeconfig
+            # ---------------------------------------------------------
+            if echo "$CREDS" | base64 -d 2>/dev/null | grep -q "kind: Config"; then
+              echo "is_kubeconfig=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "is_kubeconfig=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+        shell: bash
+
+      # ============================================================
+      # PHASE 2: COLLATION & VALIDATION
+      # Auto-detect auth method from credentials, merge values, validate
+      # ============================================================
+      - name: Collate and validate credentials
+        id: creds
+        run: |
+          errors=""
+
+          # ---------------------------------------------------------
+          # Auto-detect auth method from credential format
+          # (No input needed - credential format dictates auth method)
+          # ---------------------------------------------------------
+          AUTH_METHOD=""
+          if [[ "${{ steps.retrieve.outputs.json_gcp_type }}" == "service_account" ]]; then
+            AUTH_METHOD="gke"
+          elif [[ -n "${{ steps.retrieve.outputs.json_aws_secret_access_key }}" ]]; then
+            AUTH_METHOD="eks"
+          elif [[ -n "${{ steps.retrieve.outputs.json_client_secret }}" ]]; then
+            AUTH_METHOD="aks"
+          elif [[ "${{ steps.retrieve.outputs.is_kubeconfig }}" == "true" ]]; then
+            AUTH_METHOD="kubeconfig"
+          else
+            errors+="Unable to detect auth method from credentials. Expected: GCP SA JSON, AWS JSON, Azure JSON, or base64 kubeconfig\n"
+          fi
+          echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"
+
+          # ---------------------------------------------------------
+          # GKE (Google Kubernetes Engine)
+          # Required: GCP SA JSON, CLUSTER_PROJECT, CLUSTER_NAME, CLUSTER_REGION
+          # ---------------------------------------------------------
+          if [[ "$AUTH_METHOD" == "gke" ]]; then
+            [[ -z "${{ inputs.CLUSTER_PROJECT }}" ]] && errors+="CLUSTER_PROJECT is required for GKE\n"
+            [[ -z "${{ inputs.CLUSTER_NAME }}" ]] && errors+="CLUSTER_NAME is required for GKE\n"
+            [[ -z "${{ inputs.CLUSTER_REGION }}" ]] && errors+="CLUSTER_REGION is required for GKE\n"
+
+          # ---------------------------------------------------------
+          # EKS (Amazon Elastic Kubernetes Service)
+          # Required: aws credentials, CLUSTER_NAME, region
+          # ---------------------------------------------------------
+          elif [[ "$AUTH_METHOD" == "eks" ]]; then
+            # -- Secret already validated by detection --
+            SECRET="${{ steps.retrieve.outputs.json_aws_secret_access_key }}"
+
+            # -- Access Key ID: input -> JSON --
+            KEY_ID="${{ inputs.AWS_ACCESS_KEY_ID }}"
+            [[ -z "$KEY_ID" ]] && KEY_ID="${{ steps.retrieve.outputs.json_aws_access_key_id }}"
+            [[ -z "$KEY_ID" ]] && errors+="aws_access_key_id is required (as input or in JSON)\n"
+
+            # -- Region: input -> JSON -> CLUSTER_REGION input --
+            REGION="${{ inputs.AWS_REGION }}"
+            [[ -z "$REGION" ]] && REGION="${{ steps.retrieve.outputs.json_aws_region }}"
+            [[ -z "$REGION" ]] && REGION="${{ inputs.CLUSTER_REGION }}"
+            [[ -z "$REGION" ]] && errors+="AWS_REGION or CLUSTER_REGION is required for EKS\n"
+
+            # -- Cluster name (required) --
+            [[ -z "${{ inputs.CLUSTER_NAME }}" ]] && errors+="CLUSTER_NAME is required for EKS\n"
+
+            echo "aws_secret_access_key=$SECRET" >> "$GITHUB_OUTPUT"
+            echo "aws_access_key_id=$KEY_ID" >> "$GITHUB_OUTPUT"
+            echo "aws_region=$REGION" >> "$GITHUB_OUTPUT"
+
+          # ---------------------------------------------------------
+          # AKS (Azure Kubernetes Service)
+          # Required: Azure credentials, CLUSTER_NAME, AZURE_RESOURCE_GROUP
+          # ---------------------------------------------------------
+          elif [[ "$AUTH_METHOD" == "aks" ]]; then
+            # -- Secret already validated by detection --
+            SECRET="${{ steps.retrieve.outputs.json_client_secret }}"
+
+            # -- Client ID: input -> JSON --
+            CLIENT_ID="${{ inputs.AZURE_CLIENT_ID }}"
+            [[ -z "$CLIENT_ID" ]] && CLIENT_ID="${{ steps.retrieve.outputs.json_client_id }}"
+            [[ -z "$CLIENT_ID" ]] && errors+="clientId is required (as input or in JSON)\n"
+
+            # -- Tenant ID: input -> JSON --
+            TENANT_ID="${{ inputs.AZURE_TENANT_ID }}"
+            [[ -z "$TENANT_ID" ]] && TENANT_ID="${{ steps.retrieve.outputs.json_tenant_id }}"
+            [[ -z "$TENANT_ID" ]] && errors+="tenantId is required (as input or in JSON)\n"
+
+            # -- Cluster inputs --
+            [[ -z "${{ inputs.CLUSTER_NAME }}" ]] && errors+="CLUSTER_NAME is required for AKS\n"
+            [[ -z "${{ inputs.AZURE_RESOURCE_GROUP }}" ]] && errors+="AZURE_RESOURCE_GROUP is required for AKS\n"
+
+            echo "azure_client_secret=$SECRET" >> "$GITHUB_OUTPUT"
+            echo "azure_client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
+            echo "azure_tenant_id=$TENANT_ID" >> "$GITHUB_OUTPUT"
+          fi
+
+          # ---------------------------------------------------------
+          # Output validation errors if any
+          # ---------------------------------------------------------
+          if [[ -n "$errors" ]]; then
+            echo "::error::Credential validation failed:"
+            echo -e "$errors"
+            exit 1
+          fi
+        shell: bash
+
+      # ============================================================
+      # PHASE 3: CONNECT
+      # Authenticate and get cluster credentials
+      # ============================================================
+
+      # -- GKE: Auth + get credentials --
+      - name: Auth to GKE
+        if: steps.creds.outputs.auth_method == 'gke'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.CLUSTER_CREDENTIALS }}
+
+      - name: Setup gcloud CLI
+        if: steps.creds.outputs.auth_method == 'gke'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Get GKE credentials
+        if: steps.creds.outputs.auth_method == 'gke'
+        run: |
+          gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} \
+            --region=${{ inputs.CLUSTER_REGION }} \
+            --project=${{ inputs.CLUSTER_PROJECT }}
+        shell: bash
+
+      # -- EKS: Configure AWS + get credentials --
+      - name: Configure AWS credentials for EKS
+        if: steps.creds.outputs.auth_method == 'eks'
+        run: |
+          aws configure set aws_access_key_id "${{ steps.creds.outputs.aws_access_key_id }}"
+          aws configure set aws_secret_access_key "${{ steps.creds.outputs.aws_secret_access_key }}"
+          aws configure set region "${{ steps.creds.outputs.aws_region }}"
+        shell: bash
+
+      - name: Get EKS credentials
+        if: steps.creds.outputs.auth_method == 'eks'
+        run: |
+          aws eks update-kubeconfig --name ${{ inputs.CLUSTER_NAME }} --region ${{ steps.creds.outputs.aws_region }}
+        shell: bash
+
+      # -- AKS: Azure login + get credentials --
+      - name: Azure Login for AKS
+        if: steps.creds.outputs.auth_method == 'aks'
+        run: |
+          az login --service-principal \
+            -u "${{ steps.creds.outputs.azure_client_id }}" \
+            -p "${{ steps.creds.outputs.azure_client_secret }}" \
+            --tenant "${{ steps.creds.outputs.azure_tenant_id }}"
+        shell: bash
+
+      - name: Get AKS credentials
+        if: steps.creds.outputs.auth_method == 'aks'
+        run: |
+          az aks get-credentials --name ${{ inputs.CLUSTER_NAME }} \
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
+        shell: bash
+
+      # -- Kubeconfig: Direct setup --
+      - name: Setup kubeconfig
+        if: steps.creds.outputs.auth_method == 'kubeconfig'
+        run: |
+          mkdir -p ~/.kube
+          echo '${{ secrets.CLUSTER_CREDENTIALS }}' | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+        shell: bash
+
+      # ============================================================
+      # TEST CONNECTION
+      # ============================================================
+      - name: Test cluster connection
+        id: test
+        run: |
+          echo "Testing cluster connection..."
+          if kubectl cluster-info; then
+            echo "Cluster connection successful"
+            kubectl get namespaces --no-headers | head -5
+          else
+            echo "ERROR: Failed to connect to cluster"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Set validated output
+        id: validate
+        run: echo "validated=true" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # ============================================================
+      # SAVE KUBECONFIG ARTIFACT
+      # ============================================================
+      - name: Upload kubeconfig artifact
+        id: artifact
+        run: |
+          ARTIFACT_NAME="kubeconfig-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Upload kubeconfig
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubeconfig-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ~/.kube/config
+          retention-days: 1

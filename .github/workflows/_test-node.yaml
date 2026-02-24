@@ -1,0 +1,90 @@
+name: Test Node
+
+on:
+  workflow_call:
+    inputs:
+      APP_NAME:
+        description: 'Name of the UI service'
+        required: true
+        type: string
+      NODE_VERSION:
+        description: 'Node.js version to use'
+        type: string
+        required: true
+      TEST_COMMAND:
+        description: 'Command to run test files'
+        required: false
+        type: string
+        default: 'yarn test'
+      PACKAGE_MANAGER:
+        description: 'Package manager to use (yarn or npm)'
+        required: false
+        type: string
+        default: 'yarn'
+      LINTER_CHECKS:
+        description: 'Enable linter checks'
+        required: false
+        type: boolean
+        default: true
+      ENABLE_TESTS:
+        description: 'Enable running tests'
+        required: false
+        type: boolean
+        default: true
+      PRETTIER_CHECKS:
+        description: 'Enable prettier checks'
+        required: false
+        type: boolean
+        default: true
+
+    secrets:
+      PAT:
+        description: 'GitHub Personal Access Token'
+        required: false
+      NPM_TOKEN:
+        description: 'NPM token for private packages'
+        required: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test and Linters
+    # No branch restriction - runs whenever called by consumer workflow
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+
+      - name: Configure npm registry
+        run: |
+          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Install dependencies (yarn)
+        if: ${{ inputs.PACKAGE_MANAGER == 'yarn' }}
+        run: yarn install
+
+      - name: Install dependencies (npm)
+        if: ${{ inputs.PACKAGE_MANAGER == 'npm' }}
+        run: npm ci
+
+      - name: Run linter (yarn)
+        if: ${{ inputs.LINTER_CHECKS && inputs.PACKAGE_MANAGER == 'yarn' }}
+        run: CI=false yarn lint
+
+      - name: Run linter (npm)
+        if: ${{ inputs.LINTER_CHECKS && inputs.PACKAGE_MANAGER == 'npm' }}
+        run: CI=false npm run lint
+
+      - name: Run prettier (yarn)
+        if: ${{ inputs.PRETTIER_CHECKS && inputs.PACKAGE_MANAGER == 'yarn' }}
+        run: CI=false yarn prettier:check
+
+      - name: Run prettier (npm)
+        if: ${{ inputs.PRETTIER_CHECKS && inputs.PACKAGE_MANAGER == 'npm' }}
+        run: CI=false npm run prettier:check
+
+      - name: Run tests
+        if: ${{ inputs.ENABLE_TESTS }}
+        run: ${{ inputs.TEST_COMMAND }}

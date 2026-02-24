@@ -1,0 +1,225 @@
+name: "Deploy"
+
+on:
+  workflow_call:
+    inputs:
+      SVC_NAME:
+        description: 'Service name (k8s deployment/cronjob name)'
+        required: true
+        type: string
+      TYPE:
+        description: 'deployment or cron'
+        required: false
+        type: string
+        default: 'deployment'
+      IMAGE:
+        description: 'Full image URL with tag'
+        required: true
+        type: string
+      NAMESPACE:
+        description: 'Kubernetes namespace'
+        required: true
+        type: string
+      CLUSTER_AUTH_METHOD:
+        description: 'Cluster auth method: gke, eks, aks, kubeconfig'
+        required: false
+        type: string
+        default: 'kubeconfig'
+      # GKE inputs
+      CLUSTER_PROJECT:
+        description: 'GCP project for cluster (for GKE)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_NAME:
+        description: 'Kubernetes cluster name'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_REGION:
+        description: 'Cluster region'
+        required: false
+        type: string
+        default: 'us-central1'
+      # EKS inputs
+      AWS_REGION:
+        description: 'AWS region (for EKS)'
+        required: false
+        type: string
+        default: ''
+      # AKS inputs
+      AZURE_RESOURCE_GROUP:
+        description: 'Azure resource group (for AKS)'
+        required: false
+        type: string
+        default: ''
+      DEPLOY_METHOD:
+        description: 'kubectl or helm'
+        required: false
+        type: string
+        default: 'kubectl'
+      HELM_VALUES_PATH:
+        description: 'Path to Helm values file (required if DEPLOY_METHOD=helm)'
+        required: false
+        type: string
+        default: ''
+      APP_VERSION:
+        description: 'Application version to set as env var (optional, used for prod deployments)'
+        required: false
+        type: string
+        default: ''
+
+    secrets:
+      CLUSTER_CREDENTIALS:
+        description: 'Cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        required: true
+      PAT:
+        description: 'GitHub PAT for Helm repo access'
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Detect credential type
+        id: detect
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+          AUTH_METHOD="${{ inputs.CLUSTER_AUTH_METHOD }}"
+
+          # Detect credential type
+          detected_type=""
+          if echo "$CREDS" | jq -e '.type == "service_account"' > /dev/null 2>&1; then
+            detected_type="gke"
+          elif echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
+            detected_type="eks"
+          elif echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
+            detected_type="aks"
+          elif echo "$CREDS" | base64 -d 2>/dev/null | grep -q "kind: Config"; then
+            detected_type="kubeconfig"
+          else
+            detected_type="$AUTH_METHOD"
+          fi
+
+          # Use detected type if AUTH_METHOD is kubeconfig (default)
+          if [[ "$AUTH_METHOD" == "kubeconfig" && "$detected_type" != "kubeconfig" ]]; then
+            AUTH_METHOD="$detected_type"
+          fi
+
+          echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # Auth to GKE
+      - name: Auth to GKE
+        if: steps.detect.outputs.auth_method == 'gke'
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.CLUSTER_CREDENTIALS }}
+
+      - name: Setup gcloud CLI
+        if: steps.detect.outputs.auth_method == 'gke'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Get GKE credentials
+        if: steps.detect.outputs.auth_method == 'gke'
+        run: |
+          gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} \
+            --region=${{ inputs.CLUSTER_REGION }} \
+            --project=${{ inputs.CLUSTER_PROJECT }}
+
+      # Auth to EKS
+      - name: Configure AWS credentials for EKS
+        if: steps.detect.outputs.auth_method == 'eks'
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+
+          if echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
+            AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.aws_access_key_id')
+            AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.aws_secret_access_key')
+          else
+            echo "ERROR: CLUSTER_CREDENTIALS must be JSON with aws_access_key_id and aws_secret_access_key"
+            exit 1
+          fi
+
+          AWS_REGION="${{ inputs.AWS_REGION }}"
+          [[ -z "$AWS_REGION" ]] && AWS_REGION="${{ inputs.CLUSTER_REGION }}"
+
+          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+          aws configure set region "$AWS_REGION"
+
+          echo "aws_region=$AWS_REGION" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Get EKS credentials
+        if: steps.detect.outputs.auth_method == 'eks'
+        run: |
+          aws eks update-kubeconfig --name ${{ inputs.CLUSTER_NAME }} --region ${{ env.aws_region }}
+
+      # Auth to AKS
+      - name: Azure Login for AKS
+        if: steps.detect.outputs.auth_method == 'aks'
+        run: |
+          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
+
+          if echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
+            CLIENT_ID=$(echo "$CREDS" | jq -r '.clientId')
+            CLIENT_SECRET=$(echo "$CREDS" | jq -r '.clientSecret')
+            TENANT_ID=$(echo "$CREDS" | jq -r '.tenantId')
+          else
+            echo "ERROR: CLUSTER_CREDENTIALS must be JSON with clientId, clientSecret, and tenantId"
+            exit 1
+          fi
+
+          az login --service-principal -u "$CLIENT_ID" -p "$CLIENT_SECRET" --tenant "$TENANT_ID"
+        shell: bash
+
+      - name: Get AKS credentials
+        if: steps.detect.outputs.auth_method == 'aks'
+        run: |
+          az aks get-credentials --name ${{ inputs.CLUSTER_NAME }} \
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
+
+      # Auth via kubeconfig
+      - name: Setup kubeconfig
+        if: steps.detect.outputs.auth_method == 'kubeconfig'
+        run: |
+          mkdir -p ~/.kube
+          echo '${{ secrets.CLUSTER_CREDENTIALS }}' | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # kubectl deployment
+      - name: Update Deployment Image (kubectl)
+        if: inputs.DEPLOY_METHOD == 'kubectl' && inputs.TYPE == 'deployment'
+        run: kubectl set image deployment/${{ inputs.SVC_NAME }} ${{ inputs.SVC_NAME }}=${{ inputs.IMAGE }} --namespace ${{ inputs.NAMESPACE }}
+
+      - name: Update CronJob Image (kubectl)
+        if: inputs.DEPLOY_METHOD == 'kubectl' && inputs.TYPE == 'cron'
+        run: kubectl set image cronjobs/${{ inputs.SVC_NAME }} ${{ inputs.SVC_NAME }}=${{ inputs.IMAGE }} --namespace ${{ inputs.NAMESPACE }}
+
+      # Helm deployment
+      - name: Setup Helm Chart
+        if: inputs.DEPLOY_METHOD == 'helm'
+        run: git clone https://${{ secrets.PAT }}@github.com/zopsmart/helm.git
+
+      - name: Add Helm Repo
+        if: inputs.DEPLOY_METHOD == 'helm'
+        run: |
+          helm repo add helm \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.PAT }}" \
+            "https://raw.githubusercontent.com/zopsmart/helm/main/charts"
+
+      - name: Deploy with Helm
+        if: inputs.DEPLOY_METHOD == 'helm'
+        run: helm upgrade --install --set image=${{ inputs.IMAGE }} ${{ inputs.SVC_NAME }} helm/service -f ${{ inputs.HELM_VALUES_PATH }} -n ${{ inputs.NAMESPACE }} --version v0.1.4
+
+      # Set app version (for production deployments)
+      - name: Set App Version
+        if: inputs.APP_VERSION != '' && inputs.TYPE == 'deployment'
+        run: kubectl set env deployment/${{ inputs.SVC_NAME }} APP_VERSION=${{ inputs.APP_VERSION }} -n ${{ inputs.NAMESPACE }}

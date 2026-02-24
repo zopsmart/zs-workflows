@@ -1,0 +1,313 @@
+name: "Prod Deploy"
+
+on:
+  workflow_call:
+    inputs:
+      # Required inputs
+      SVC_NAME:
+        description: 'Service name (k8s deployment/cronjob name)'
+        required: true
+        type: string
+
+      # Optional inputs with defaults
+      TYPE:
+        description: 'deployment or cron'
+        required: false
+        type: string
+        default: 'deployment'
+      DEPLOY_METHOD:
+        description: 'kubectl or helm'
+        required: false
+        type: string
+        default: 'kubectl'
+      HELM_VALUES_PATH:
+        description: 'Path to Helm values file (required if DEPLOY_METHOD=helm)'
+        required: false
+        type: string
+        default: ''
+      ENV_FILE_PATH:
+        description: 'Path to env file. Empty string skips configmap. Default: configs/.prod.env'
+        required: false
+        type: string
+        default: '__default__'
+      REACT_APP:
+        description: 'Enable React-specific configmap format'
+        required: false
+        type: boolean
+        default: false
+
+      # Registry inputs (provider-agnostic)
+      REGISTRY_TYPE:
+        description: 'Registry provider: gar, gcr, ecr, acr, dockerhub, ghcr, custom'
+        required: false
+        type: string
+        default: ''
+      IMAGE_REGISTRY:
+        description: 'Container registry URL (defaults to vars.IMAGE_REGISTRY)'
+        required: false
+        type: string
+        default: ''
+      REGISTRY_PROJECT:
+        description: 'Project/account/namespace within registry (defaults to vars.REGISTRY_PROJECT)'
+        required: false
+        type: string
+        default: ''
+      REGISTRY_REPO:
+        description: 'Repository name within project (defaults to vars.REGISTRY_REPO or vars.APP_NAME)'
+        required: false
+        type: string
+        default: ''
+
+      # Cluster auth inputs (multi-cloud)
+      CLUSTER_PROJECT:
+        description: 'GCP project for cluster (defaults to vars.CLUSTER_PROJECT)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_NAME:
+        description: 'Kubernetes cluster name (defaults to vars.CLUSTER_NAME)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_REGION:
+        description: 'Cluster region (defaults to vars.CLUSTER_REGION)'
+        required: false
+        type: string
+        default: ''
+      AWS_REGION:
+        description: 'AWS region for EKS (defaults to vars.AWS_REGION)'
+        required: false
+        type: string
+        default: ''
+      AZURE_RESOURCE_GROUP:
+        description: 'Azure resource group for AKS (defaults to vars.AZURE_RESOURCE_GROUP)'
+        required: false
+        type: string
+        default: ''
+      NAMESPACE:
+        description: 'Kubernetes namespace (defaults to vars.PROD_NAMESPACE or vars.APP_NAME)'
+        required: false
+        type: string
+        default: ''
+
+    secrets:
+      PAT:
+        description: 'GitHub PAT for Helm repo access'
+        required: false
+      REGISTRY_CREDENTIALS:
+        description: 'Registry auth credentials (auto-detected: GCP SA JSON, AWS JSON, Azure JSON, or password/token)'
+        required: false
+      CLUSTER_CREDENTIALS:
+        description: 'Cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        required: false
+      # Legacy support
+      GAR_KEY:
+        description: 'Deprecated: Use REGISTRY_CREDENTIALS instead'
+        required: false
+      PROD_DEPLOY_KEY:
+        description: 'Deprecated: Use CLUSTER_CREDENTIALS instead'
+        required: false
+      DEPLOY_KEY:
+        description: 'Deprecated: Use CLUSTER_CREDENTIALS instead'
+        required: false
+
+jobs:
+  # Resolve configuration values
+  resolve-config:
+    runs-on: ubuntu-latest
+    name: Resolve Configuration
+    if: startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      registry_type: ${{ steps.resolve.outputs.registry_type }}
+      image_registry: ${{ steps.resolve.outputs.image_registry }}
+      registry_project: ${{ steps.resolve.outputs.registry_project }}
+      registry_repo: ${{ steps.resolve.outputs.registry_repo }}
+      cluster_project: ${{ steps.resolve.outputs.cluster_project }}
+      cluster_name: ${{ steps.resolve.outputs.cluster_name }}
+      cluster_region: ${{ steps.resolve.outputs.cluster_region }}
+      aws_region: ${{ steps.resolve.outputs.aws_region }}
+      azure_resource_group: ${{ steps.resolve.outputs.azure_resource_group }}
+      namespace: ${{ steps.resolve.outputs.namespace }}
+      env_file_path: ${{ steps.resolve.outputs.env_file_path }}
+      env_file_explicit: ${{ steps.resolve.outputs.env_file_explicit }}
+      release_version: ${{ steps.version.outputs.release_version }}
+    steps:
+      - name: Extract Release Version
+        id: version
+        run: echo "release_version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve values
+        id: resolve
+        run: |
+          # Value resolution order: input -> repo variable -> derived default
+
+          # REGISTRY_TYPE: input -> vars.REGISTRY_TYPE -> error
+          if [[ -n "${{ inputs.REGISTRY_TYPE }}" ]]; then
+            REGISTRY_TYPE="${{ inputs.REGISTRY_TYPE }}"
+          elif [[ -n "${{ vars.REGISTRY_TYPE }}" ]]; then
+            REGISTRY_TYPE="${{ vars.REGISTRY_TYPE }}"
+          else
+            echo "ERROR: REGISTRY_TYPE is required. Set it as input or as vars.REGISTRY_TYPE"
+            exit 1
+          fi
+          echo "registry_type=$REGISTRY_TYPE" >> "$GITHUB_OUTPUT"
+
+          # IMAGE_REGISTRY: input -> vars.IMAGE_REGISTRY -> default based on type
+          if [[ -n "${{ inputs.IMAGE_REGISTRY }}" ]]; then
+            IMAGE_REGISTRY="${{ inputs.IMAGE_REGISTRY }}"
+          elif [[ -n "${{ vars.IMAGE_REGISTRY }}" ]]; then
+            IMAGE_REGISTRY="${{ vars.IMAGE_REGISTRY }}"
+          else
+            case "$REGISTRY_TYPE" in
+              gcr) IMAGE_REGISTRY="gcr.io" ;;
+              ghcr) IMAGE_REGISTRY="ghcr.io" ;;
+              dockerhub) IMAGE_REGISTRY="docker.io" ;;
+              *) IMAGE_REGISTRY="" ;;
+            esac
+          fi
+          echo "image_registry=$IMAGE_REGISTRY" >> "$GITHUB_OUTPUT"
+
+          # REGISTRY_PROJECT: input -> vars.REGISTRY_PROJECT -> vars.GAR_PROJECT (legacy)
+          if [[ -n "${{ inputs.REGISTRY_PROJECT }}" ]]; then
+            echo "registry_project=${{ inputs.REGISTRY_PROJECT }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ vars.REGISTRY_PROJECT }}" ]]; then
+            echo "registry_project=${{ vars.REGISTRY_PROJECT }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ vars.GAR_PROJECT }}" ]]; then
+            echo "registry_project=${{ vars.GAR_PROJECT }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "registry_project=" >> "$GITHUB_OUTPUT"
+          fi
+
+          # REGISTRY_REPO: input -> vars.REGISTRY_REPO -> vars.GAR_REGISTRY (legacy) -> vars.APP_NAME
+          if [[ -n "${{ inputs.REGISTRY_REPO }}" ]]; then
+            echo "registry_repo=${{ inputs.REGISTRY_REPO }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ vars.REGISTRY_REPO }}" ]]; then
+            echo "registry_repo=${{ vars.REGISTRY_REPO }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ vars.GAR_REGISTRY }}" ]]; then
+            echo "registry_repo=${{ vars.GAR_REGISTRY }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "registry_repo=${{ vars.APP_NAME }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          # CLUSTER_PROJECT
+          if [[ -n "${{ inputs.CLUSTER_PROJECT }}" ]]; then
+            echo "cluster_project=${{ inputs.CLUSTER_PROJECT }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "cluster_project=${{ vars.CLUSTER_PROJECT }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          # CLUSTER_NAME
+          if [[ -n "${{ inputs.CLUSTER_NAME }}" ]]; then
+            echo "cluster_name=${{ inputs.CLUSTER_NAME }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "cluster_name=${{ vars.CLUSTER_NAME }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          # CLUSTER_REGION
+          if [[ -n "${{ inputs.CLUSTER_REGION }}" ]]; then
+            echo "cluster_region=${{ inputs.CLUSTER_REGION }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ vars.CLUSTER_REGION }}" ]]; then
+            echo "cluster_region=${{ vars.CLUSTER_REGION }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "cluster_region=us-central1" >> "$GITHUB_OUTPUT"
+          fi
+
+          # AWS_REGION
+          if [[ -n "${{ inputs.AWS_REGION }}" ]]; then
+            echo "aws_region=${{ inputs.AWS_REGION }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "aws_region=${{ vars.AWS_REGION }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          # AZURE_RESOURCE_GROUP
+          if [[ -n "${{ inputs.AZURE_RESOURCE_GROUP }}" ]]; then
+            echo "azure_resource_group=${{ inputs.AZURE_RESOURCE_GROUP }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          # NAMESPACE: input -> vars.PROD_NAMESPACE -> vars.APP_NAME
+          if [[ -n "${{ inputs.NAMESPACE }}" ]]; then
+            echo "namespace=${{ inputs.NAMESPACE }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ vars.PROD_NAMESPACE }}" ]]; then
+            echo "namespace=${{ vars.PROD_NAMESPACE }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "namespace=${{ vars.APP_NAME }}" >> "$GITHUB_OUTPUT"
+          fi
+
+          # ENV_FILE_PATH handling
+          INPUT_ENV_PATH="${{ inputs.ENV_FILE_PATH }}"
+          if [[ "$INPUT_ENV_PATH" == "__default__" ]]; then
+            echo "env_file_path=./configs/.prod.env" >> "$GITHUB_OUTPUT"
+            echo "env_file_explicit=false" >> "$GITHUB_OUTPUT"
+          elif [[ -z "$INPUT_ENV_PATH" ]]; then
+            echo "env_file_path=" >> "$GITHUB_OUTPUT"
+            echo "env_file_explicit=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "env_file_path=$INPUT_ENV_PATH" >> "$GITHUB_OUTPUT"
+            echo "env_file_explicit=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+  # Retag image with release version
+  retag:
+    needs: resolve-config
+    uses: zopsmart/zs-workflows/.github/workflows/_retag-image.yaml@main
+    with:
+      SVC_NAME: ${{ inputs.SVC_NAME }}
+      REGISTRY_TYPE: ${{ needs.resolve-config.outputs.registry_type }}
+      IMAGE_REGISTRY: ${{ needs.resolve-config.outputs.image_registry }}
+      REGISTRY_PROJECT: ${{ needs.resolve-config.outputs.registry_project }}
+      REGISTRY_REPO: ${{ needs.resolve-config.outputs.registry_repo }}
+      SOURCE_TAG: ${{ github.sha }}
+      TARGET_TAG: ${{ needs.resolve-config.outputs.release_version }}
+    secrets:
+      REGISTRY_CREDENTIALS: ${{ secrets.REGISTRY_CREDENTIALS || secrets.GAR_KEY }}
+
+  # Deploy to production
+  deploy:
+    needs: [resolve-config, retag]
+    if: |
+      needs.retag.outputs.tag_exists == 'true' &&
+      needs.resolve-config.outputs.cluster_name != ''
+    uses: zopsmart/zs-workflows/.github/workflows/_deploy.yaml@main
+    with:
+      SVC_NAME: ${{ inputs.SVC_NAME }}
+      TYPE: ${{ inputs.TYPE }}
+      IMAGE: ${{ needs.retag.outputs.image }}
+      NAMESPACE: ${{ needs.resolve-config.outputs.namespace }}
+      CLUSTER_PROJECT: ${{ needs.resolve-config.outputs.cluster_project }}
+      CLUSTER_NAME: ${{ needs.resolve-config.outputs.cluster_name }}
+      CLUSTER_REGION: ${{ needs.resolve-config.outputs.cluster_region }}
+      AWS_REGION: ${{ needs.resolve-config.outputs.aws_region }}
+      AZURE_RESOURCE_GROUP: ${{ needs.resolve-config.outputs.azure_resource_group }}
+      DEPLOY_METHOD: ${{ inputs.DEPLOY_METHOD }}
+      HELM_VALUES_PATH: ${{ inputs.HELM_VALUES_PATH }}
+      APP_VERSION: ${{ needs.resolve-config.outputs.release_version }}
+    secrets:
+      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      PAT: ${{ secrets.PAT }}
+
+  # Update configmap
+  update-configmap:
+    needs: [resolve-config, retag, deploy]
+    if: |
+      always() &&
+      needs.retag.outputs.tag_exists == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.resolve-config.outputs.env_file_path != '' &&
+      needs.resolve-config.outputs.cluster_name != ''
+    uses: zopsmart/zs-workflows/.github/workflows/_update-configmap.yaml@main
+    with:
+      SVC_NAME: ${{ inputs.SVC_NAME }}
+      NAMESPACE: ${{ needs.resolve-config.outputs.namespace }}
+      ENV_FILE_PATH: ${{ needs.resolve-config.outputs.env_file_path }}
+      CLUSTER_PROJECT: ${{ needs.resolve-config.outputs.cluster_project }}
+      CLUSTER_NAME: ${{ needs.resolve-config.outputs.cluster_name }}
+      CLUSTER_REGION: ${{ needs.resolve-config.outputs.cluster_region }}
+      AWS_REGION: ${{ needs.resolve-config.outputs.aws_region }}
+      AZURE_RESOURCE_GROUP: ${{ needs.resolve-config.outputs.azure_resource_group }}
+      REACT_APP: ${{ inputs.REACT_APP }}
+      ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-config.outputs.env_file_explicit == 'true' }}
+    secrets:
+      CLUSTER_CREDENTIALS: ${{ secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
