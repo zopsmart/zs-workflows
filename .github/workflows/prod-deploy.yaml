@@ -288,7 +288,7 @@ jobs:
       HELM_VALUES_PATH: ${{ inputs.HELM_VALUES_PATH }}
       APP_VERSION: ${{ needs.resolve-config.outputs.release_version }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY }}
       PAT: ${{ secrets.PAT }}
 
   # Update configmap
@@ -313,4 +313,4 @@ jobs:
       REACT_APP: ${{ inputs.REACT_APP }}
       ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-config.outputs.env_file_explicit == 'true' }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY || secrets.GAR_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.PROD_DEPLOY_KEY || secrets.DEPLOY_KEY }}

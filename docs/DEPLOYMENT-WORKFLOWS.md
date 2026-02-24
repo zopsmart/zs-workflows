@@ -181,15 +181,13 @@ Credentials support both full JSON and partial/split configurations. User inputs
 │  ├─► secrets.STAGE_CLUSTER_CREDENTIALS                              │
 │  ├─► secrets.CLUSTER_CREDENTIALS                                    │
 │  ├─► secrets.STAGE_DEPLOY_KEY        (legacy)                       │
-│  ├─► secrets.DEPLOY_KEY              (legacy)                       │
-│  └─► secrets.GAR_KEY                 (legacy)                       │
+│  └─► secrets.DEPLOY_KEY              (legacy)                       │
 │                                                                      │
 │  prod-deploy.yaml:                                                  │
 │  ├─► secrets.PROD_CLUSTER_CREDENTIALS                               │
 │  ├─► secrets.CLUSTER_CREDENTIALS                                    │
 │  ├─► secrets.PROD_DEPLOY_KEY         (legacy)                       │
-│  ├─► secrets.DEPLOY_KEY              (legacy)                       │
-│  └─► secrets.GAR_KEY                 (legacy)                       │
+│  └─► secrets.DEPLOY_KEY              (legacy)                       │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -433,7 +431,7 @@ If you're using the old GAR-specific workflows, here's how to migrate:
 
 The new workflows support legacy variable/secret names via fallback:
 - `REGISTRY_CREDENTIALS` falls back to `GAR_KEY`
-- `CLUSTER_CREDENTIALS` falls back to `STAGE_DEPLOY_KEY` / `PROD_DEPLOY_KEY` / `DEPLOY_KEY` / `GAR_KEY`
+- `CLUSTER_CREDENTIALS` falls back to `STAGE_DEPLOY_KEY` / `PROD_DEPLOY_KEY` / `DEPLOY_KEY`
 - `REGISTRY_PROJECT` falls back to `vars.GAR_PROJECT`
 - `REGISTRY_REPO` falls back to `vars.GAR_REGISTRY`
 
