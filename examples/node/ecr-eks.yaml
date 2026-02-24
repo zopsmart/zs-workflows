@@ -1,19 +1,24 @@
 # Example: Node/Yarn service with Amazon ECR + Amazon EKS
 #
+# This example pushes images to ECR and deploys to an EKS cluster.
+#
+# Auto-detection:
+#   - REGISTRY_TYPE: auto-detected as 'ecr' from IMAGE_REGISTRY URL (*.dkr.ecr.*.amazonaws.com)
+#   - ECR region: auto-extracted from IMAGE_REGISTRY URL
+#   - Cluster auth: auto-detected as 'eks' from AWS JSON (aws_secret_access_key present)
+#
 # Required repository variables (vars.*):
-#   - REGISTRY_TYPE: "ecr"
-#   - IMAGE_REGISTRY: "123456789012.dkr.ecr.us-east-1.amazonaws.com"
-#   - CLUSTER_NAME: "my-eks-cluster"
-#   - AWS_REGION: "us-east-1"
-#   - APP_NAME: "my-frontend"
+#   APP_NAME: "my-frontend"
 #
 # Required repository secrets (secrets.*):
-#   - REGISTRY_CREDENTIALS: AWS credentials JSON
-#     Example: {"aws_access_key_id": "AKIA...", "aws_secret_access_key": "..."}
-#   - CLUSTER_CREDENTIALS: AWS credentials JSON (can be same as REGISTRY_CREDENTIALS)
-#     Example: {"aws_access_key_id": "AKIA...", "aws_secret_access_key": "..."}
-#   - NPM_TOKEN: NPM token for private packages (optional)
-#   - PAT: GitHub Personal Access Token (for private dependencies)
+#   REGISTRY_CREDENTIALS: AWS credentials JSON for ECR access
+#     Format: {"aws_access_key_id": "AKIA...", "aws_secret_access_key": "..."}
+#   CLUSTER_CREDENTIALS: AWS credentials JSON for EKS access (can be same as above)
+#     Format: {"aws_access_key_id": "AKIA...", "aws_secret_access_key": "...", "aws_region": "us-east-1"}
+#   NPM_TOKEN: NPM token for private packages (optional)
+#   PAT: GitHub Personal Access Token (optional, for private dependencies)
+#
+# Note: CLUSTER_REGION is required for EKS cluster authentication.
 
 name: Deploy
 
@@ -29,12 +34,13 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/stage-deploy.yaml@main
     with:
       SVC_NAME: my-frontend
-      BUILD_COMMAND: yarn build  # Language auto-detected as 'node'
-      REACT_APP: true
-      REGISTRY_TYPE: ecr
+      BUILD_COMMAND: 'yarn build'
+      REACT_APP: true                           # Generate React-style configmap
+      # Registry: REGISTRY_TYPE auto-detected as 'ecr' from URL
       IMAGE_REGISTRY: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+      # Cluster config
       CLUSTER_NAME: my-eks-cluster
-      AWS_REGION: us-east-1
+      CLUSTER_REGION: us-east-1                 # Required for EKS cluster auth
     secrets: inherit
 
   prod:
@@ -43,8 +49,7 @@ jobs:
     with:
       SVC_NAME: my-frontend
       REACT_APP: true
-      REGISTRY_TYPE: ecr
       IMAGE_REGISTRY: 123456789012.dkr.ecr.us-east-1.amazonaws.com
       CLUSTER_NAME: my-eks-cluster
-      AWS_REGION: us-east-1
+      CLUSTER_REGION: us-east-1
     secrets: inherit

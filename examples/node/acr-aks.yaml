@@ -1,19 +1,23 @@
 # Example: Node/Yarn service with Azure Container Registry (ACR) + Azure Kubernetes Service (AKS)
 #
+# This example pushes images to ACR and deploys to an AKS cluster.
+#
+# Auto-detection:
+#   - REGISTRY_TYPE: auto-detected as 'acr' from IMAGE_REGISTRY URL (*.azurecr.io)
+#   - Cluster auth: auto-detected as 'aks' from Azure JSON (clientSecret present)
+#
 # Required repository variables (vars.*):
-#   - REGISTRY_TYPE: "acr"
-#   - IMAGE_REGISTRY: "myregistry.azurecr.io"
-#   - CLUSTER_NAME: "my-aks-cluster"
-#   - AZURE_RESOURCE_GROUP: "my-resource-group"
-#   - APP_NAME: "my-frontend"
+#   APP_NAME: "my-frontend"
 #
 # Required repository secrets (secrets.*):
-#   - REGISTRY_CREDENTIALS: Azure credentials JSON
-#     Example: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
-#   - CLUSTER_CREDENTIALS: Azure credentials JSON (can be same as REGISTRY_CREDENTIALS)
-#     Example: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
-#   - NPM_TOKEN: NPM token for private packages (optional)
-#   - PAT: GitHub Personal Access Token (for private dependencies)
+#   REGISTRY_CREDENTIALS: Azure Service Principal JSON for ACR access
+#     Format: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
+#   CLUSTER_CREDENTIALS: Azure Service Principal JSON for AKS access (can be same as above)
+#     Format: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
+#   NPM_TOKEN: NPM token for private packages (optional)
+#   PAT: GitHub Personal Access Token (optional, for private dependencies)
+#
+# Note: CLUSTER_NAME and AZURE_RESOURCE_GROUP are required for AKS cluster authentication.
 
 name: Deploy
 
@@ -29,10 +33,11 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/stage-deploy.yaml@main
     with:
       SVC_NAME: my-frontend
-      BUILD_COMMAND: yarn build  # Language auto-detected as 'node'
-      REACT_APP: true
-      REGISTRY_TYPE: acr
+      BUILD_COMMAND: 'yarn build'
+      REACT_APP: true                           # Generate React-style configmap
+      # Registry: REGISTRY_TYPE auto-detected as 'acr' from URL
       IMAGE_REGISTRY: myregistry.azurecr.io
+      # Cluster config
       CLUSTER_NAME: my-aks-cluster
       AZURE_RESOURCE_GROUP: my-resource-group
     secrets: inherit
@@ -43,7 +48,6 @@ jobs:
     with:
       SVC_NAME: my-frontend
       REACT_APP: true
-      REGISTRY_TYPE: acr
       IMAGE_REGISTRY: myregistry.azurecr.io
       CLUSTER_NAME: my-aks-cluster
       AZURE_RESOURCE_GROUP: my-resource-group
