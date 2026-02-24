@@ -182,16 +182,16 @@ jobs:
             [[ -z "$SECRET" ]] && SECRET='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
             [[ -z "$SECRET" ]] && errors+="aws_secret_access_key not found in CLUSTER_CREDENTIALS or AWS_SECRET_ACCESS_KEY secret\n"
 
-            # -- Access Key ID: JSON -> input -> vars -> secret --
-            KEY_ID="${{ steps.retrieve.outputs.json_aws_access_key_id }}"
-            [[ -z "$KEY_ID" ]] && KEY_ID="${{ inputs.AWS_ACCESS_KEY_ID }}"
+            # -- Access Key ID: input -> JSON -> vars -> secret --
+            KEY_ID="${{ inputs.AWS_ACCESS_KEY_ID }}"
+            [[ -z "$KEY_ID" ]] && KEY_ID="${{ steps.retrieve.outputs.json_aws_access_key_id }}"
             [[ -z "$KEY_ID" ]] && KEY_ID='${{ vars.AWS_ACCESS_KEY_ID }}'
             [[ -z "$KEY_ID" ]] && KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
-            [[ -z "$KEY_ID" ]] && errors+="aws_access_key_id not found in CLUSTER_CREDENTIALS, input, vars, or secret\n"
+            [[ -z "$KEY_ID" ]] && errors+="aws_access_key_id not found in input, CLUSTER_CREDENTIALS, vars, or secret\n"
 
-            # -- Region: JSON -> input -> vars -> CLUSTER_REGION input --
-            REGION="${{ steps.retrieve.outputs.json_aws_region }}"
-            [[ -z "$REGION" ]] && REGION="${{ inputs.AWS_REGION }}"
+            # -- Region: input -> JSON -> vars -> CLUSTER_REGION input --
+            REGION="${{ inputs.AWS_REGION }}"
+            [[ -z "$REGION" ]] && REGION="${{ steps.retrieve.outputs.json_aws_region }}"
             [[ -z "$REGION" ]] && REGION='${{ vars.AWS_REGION }}'
             [[ -z "$REGION" ]] && REGION="${{ inputs.CLUSTER_REGION }}"
             [[ -z "$REGION" ]] && errors+="AWS_REGION or CLUSTER_REGION is required for EKS\n"
@@ -214,19 +214,19 @@ jobs:
             [[ -z "$SECRET" ]] && SECRET='${{ secrets.AZURE_CLIENT_SECRET }}'
             [[ -z "$SECRET" ]] && errors+="clientSecret not found in CLUSTER_CREDENTIALS or AZURE_CLIENT_SECRET secret\n"
 
-            # -- Client ID: JSON -> input -> vars -> secret --
-            CLIENT_ID="${{ steps.retrieve.outputs.json_client_id }}"
-            [[ -z "$CLIENT_ID" ]] && CLIENT_ID="${{ inputs.AZURE_CLIENT_ID }}"
+            # -- Client ID: input -> JSON -> vars -> secret --
+            CLIENT_ID="${{ inputs.AZURE_CLIENT_ID }}"
+            [[ -z "$CLIENT_ID" ]] && CLIENT_ID="${{ steps.retrieve.outputs.json_client_id }}"
             [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ vars.AZURE_CLIENT_ID }}'
             [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ secrets.AZURE_CLIENT_ID }}'
-            [[ -z "$CLIENT_ID" ]] && errors+="clientId not found in CLUSTER_CREDENTIALS, input, vars, or secret\n"
+            [[ -z "$CLIENT_ID" ]] && errors+="clientId not found in input, CLUSTER_CREDENTIALS, vars, or secret\n"
 
-            # -- Tenant ID: JSON -> input -> vars -> secret --
-            TENANT_ID="${{ steps.retrieve.outputs.json_tenant_id }}"
-            [[ -z "$TENANT_ID" ]] && TENANT_ID="${{ inputs.AZURE_TENANT_ID }}"
+            # -- Tenant ID: input -> JSON -> vars -> secret --
+            TENANT_ID="${{ inputs.AZURE_TENANT_ID }}"
+            [[ -z "$TENANT_ID" ]] && TENANT_ID="${{ steps.retrieve.outputs.json_tenant_id }}"
             [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ vars.AZURE_TENANT_ID }}'
             [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ secrets.AZURE_TENANT_ID }}'
-            [[ -z "$TENANT_ID" ]] && errors+="tenantId not found in CLUSTER_CREDENTIALS, input, vars, or secret\n"
+            [[ -z "$TENANT_ID" ]] && errors+="tenantId not found in input, CLUSTER_CREDENTIALS, vars, or secret\n"
 
             # -- Cluster inputs --
             [[ -z "${{ inputs.CLUSTER_NAME }}" ]] && errors+="CLUSTER_NAME is required for AKS\n"

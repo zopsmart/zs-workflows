@@ -2,6 +2,222 @@
 
 This document describes the internal structure and configuration of the deployment workflows.
 
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              CONSUMER REPO WORKFLOW                              │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────┐                      │
+│  │  PR Created   │   │ Push to dev   │   │ Release Tag   │                      │
+│  │  (tests only) │   │ (stage deploy)│   │ (prod deploy) │                      │
+│  └───────┬───────┘   └───────┬───────┘   └───────┬───────┘                      │
+└──────────┼───────────────────┼───────────────────┼──────────────────────────────┘
+           │                   │                   │
+           ▼                   ▼                   ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│   _test-go.yaml  │  │ stage-deploy.yaml│  │ prod-deploy.yaml │
+│  _test-node.yaml │  │                  │  │                  │
+└──────────────────┘  └────────┬─────────┘  └────────┬─────────┘
+                               │                     │
+                               ▼                     ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                            STAGE DEPLOY FLOW                                      │
+│                                                                                   │
+│  ┌──────────────────┐                                                            │
+│  │ resolve-config   │  Detect language, resolve registry/cluster vars            │
+│  └────────┬─────────┘                                                            │
+│           │                                                                       │
+│           ▼                                                                       │
+│  ┌──────────────────┐                                                            │
+│  │ _check-changes   │  Detect: code changes vs env file changes                  │
+│  └────────┬─────────┘                                                            │
+│           │                                                                       │
+│           ├─── code changed? ───┐                                                │
+│           │                     ▼                                                │
+│           │          ┌──────────────────┐                                        │
+│           │          │   BUILD PHASE    │                                        │
+│           │          │  ┌────────────┐  │                                        │
+│           │          │  │_build-go   │  │  Go: go mod download → build → docker │
+│           │          │  │_build-yarn │  │  Node: yarn install → build → docker  │
+│           │          │  │_build-generic│ │  Other: build → docker               │
+│           │          │  └─────┬──────┘  │                                        │
+│           │          │        │         │                                        │
+│           │          │        ▼         │                                        │
+│           │          │  ┌────────────┐  │                                        │
+│           │          │  │docker-build│  │  Multi-registry: GAR/GCR/ECR/ACR/     │
+│           │          │  │   -push    │  │  DockerHub/GHCR/Custom                │
+│           │          │  └─────┬──────┘  │                                        │
+│           │          └────────┼─────────┘                                        │
+│           │                   │                                                   │
+│           │                   ▼                                                   │
+│           │          ┌──────────────────┐                                        │
+│           │          │    _deploy       │  Multi-cloud: GKE/EKS/AKS/kubeconfig  │
+│           │          └────────┬─────────┘                                        │
+│           │                   │                                                   │
+│           ├───────────────────┤                                                   │
+│           │                   ▼                                                   │
+│           │          ┌──────────────────┐                                        │
+│           └─────────►│_update-configmap │  Update K8s ConfigMap from env file   │
+│      (env changed)   └──────────────────┘                                        │
+│                                                                                   │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             PROD DEPLOY FLOW                                      │
+│                                                                                   │
+│  ┌──────────────────┐                                                            │
+│  │ resolve-config   │  Extract release version, resolve vars                     │
+│  └────────┬─────────┘                                                            │
+│           │                                                                       │
+│           ▼                                                                       │
+│  ┌──────────────────┐                                                            │
+│  │  _retag-image    │  Retag SHA image → release version (v1.0.0)               │
+│  └────────┬─────────┘                                                            │
+│           │                                                                       │
+│           ▼                                                                       │
+│  ┌──────────────────┐                                                            │
+│  │    _deploy       │  Deploy to production cluster                              │
+│  └────────┬─────────┘                                                            │
+│           │                                                                       │
+│           ▼                                                                       │
+│  ┌──────────────────┐                                                            │
+│  │_update-configmap │  Update prod ConfigMap                                     │
+│  └──────────────────┘                                                            │
+│                                                                                   │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Credential Resolution
+
+Credentials support both full JSON and partial/split configurations. User inputs always have the highest priority.
+
+### Resolution Priority Order
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    CREDENTIAL RESOLUTION ORDER                       │
+│                                                                      │
+│  ┌──────────────┐                                                   │
+│  │  1. INPUT    │ ◄── Workflow input parameter (highest priority)   │
+│  └──────┬───────┘                                                   │
+│         │ (if empty)                                                │
+│         ▼                                                           │
+│  ┌──────────────┐                                                   │
+│  │  2. JSON     │ ◄── Key from CLUSTER_CREDENTIALS JSON             │
+│  └──────┬───────┘                                                   │
+│         │ (if empty)                                                │
+│         ▼                                                           │
+│  ┌──────────────┐                                                   │
+│  │  3. VARS     │ ◄── Repository variable (vars.*)                  │
+│  └──────┬───────┘                                                   │
+│         │ (if empty)                                                │
+│         ▼                                                           │
+│  ┌──────────────┐                                                   │
+│  │  4. SECRETS  │ ◄── Repository secret (secrets.*)                 │
+│  └──────────────┘                                                   │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### EKS Credential Resolution
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      EKS CREDENTIAL RESOLUTION                       │
+│                                                                      │
+│  aws_secret_access_key:                                             │
+│  ├─► CLUSTER_CREDENTIALS (if JSON with aws_secret_access_key key)   │
+│  ├─► CLUSTER_CREDENTIALS (if raw string, use as-is)                 │
+│  └─► secrets.AWS_SECRET_ACCESS_KEY                                  │
+│                                                                      │
+│  aws_access_key_id:                                                 │
+│  ├─► inputs.AWS_ACCESS_KEY_ID        (highest priority)             │
+│  ├─► CLUSTER_CREDENTIALS JSON key                                   │
+│  ├─► vars.AWS_ACCESS_KEY_ID                                         │
+│  └─► secrets.AWS_ACCESS_KEY_ID                                      │
+│                                                                      │
+│  aws_region:                                                        │
+│  ├─► inputs.AWS_REGION               (highest priority)             │
+│  ├─► CLUSTER_CREDENTIALS JSON key                                   │
+│  ├─► vars.AWS_REGION                                                │
+│  └─► inputs.CLUSTER_REGION                                          │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### AKS Credential Resolution
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      AKS CREDENTIAL RESOLUTION                       │
+│                                                                      │
+│  clientSecret:                                                      │
+│  ├─► CLUSTER_CREDENTIALS (if JSON with clientSecret key)            │
+│  ├─► CLUSTER_CREDENTIALS (if raw string, use as-is)                 │
+│  └─► secrets.AZURE_CLIENT_SECRET                                    │
+│                                                                      │
+│  clientId:                                                          │
+│  ├─► inputs.AZURE_CLIENT_ID          (highest priority)             │
+│  ├─► CLUSTER_CREDENTIALS JSON key                                   │
+│  ├─► vars.AZURE_CLIENT_ID                                           │
+│  └─► secrets.AZURE_CLIENT_ID                                        │
+│                                                                      │
+│  tenantId:                                                          │
+│  ├─► inputs.AZURE_TENANT_ID          (highest priority)             │
+│  ├─► CLUSTER_CREDENTIALS JSON key                                   │
+│  ├─► vars.AZURE_TENANT_ID                                           │
+│  └─► secrets.AZURE_TENANT_ID                                        │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Environment-Specific Cluster Credentials
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│              CLUSTER CREDENTIALS FALLBACK CHAIN                      │
+│                                                                      │
+│  stage-deploy.yaml:                                                 │
+│  ├─► secrets.STAGE_CLUSTER_CREDENTIALS                              │
+│  ├─► secrets.CLUSTER_CREDENTIALS                                    │
+│  ├─► secrets.STAGE_DEPLOY_KEY        (legacy)                       │
+│  ├─► secrets.DEPLOY_KEY              (legacy)                       │
+│  └─► secrets.GAR_KEY                 (legacy)                       │
+│                                                                      │
+│  prod-deploy.yaml:                                                  │
+│  ├─► secrets.PROD_CLUSTER_CREDENTIALS                               │
+│  ├─► secrets.CLUSTER_CREDENTIALS                                    │
+│  ├─► secrets.PROD_DEPLOY_KEY         (legacy)                       │
+│  ├─► secrets.DEPLOY_KEY              (legacy)                       │
+│  └─► secrets.GAR_KEY                 (legacy)                       │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Example: Split Credentials Configuration
+
+```yaml
+# Consumer workflow using split credentials
+jobs:
+  deploy:
+    uses: zopsmart/zs-workflows/.github/workflows/stage-deploy.yaml@main
+    with:
+      SVC_NAME: my-service
+      BUILD_COMMAND: 'go build -o main ./cmd/...'
+      # Override access key ID via input (highest priority)
+      AWS_ACCESS_KEY_ID: 'AKIAIOSFODNN7EXAMPLE'
+    secrets:
+      # Only the secret key in CLUSTER_CREDENTIALS
+      STAGE_CLUSTER_CREDENTIALS: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Other values from vars.* or secrets.* automatically resolved
+
+# Repository variables (vars.*)
+# AWS_REGION: us-east-1
+
+# Repository secrets (secrets.*)
+# AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/...
+```
+
 ## Workflows
 
 ### Entry Points

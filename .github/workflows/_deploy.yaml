@@ -185,28 +185,26 @@ jobs:
           fi
 
           # ---------------------------------------------------------------
-          # AWS_ACCESS_KEY_ID: JSON -> input -> vars -> secret
+          # AWS_ACCESS_KEY_ID: input -> JSON -> vars -> secret
           # ---------------------------------------------------------------
-          AWS_ACCESS_KEY_ID=""
-          if echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
+          AWS_ACCESS_KEY_ID='${{ inputs.AWS_ACCESS_KEY_ID }}'
+          if [[ -z "$AWS_ACCESS_KEY_ID" ]] && echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
             AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.aws_access_key_id')
           fi
-          [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ inputs.AWS_ACCESS_KEY_ID }}'
           [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ vars.AWS_ACCESS_KEY_ID }}'
           [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
           if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
-            echo "ERROR: aws_access_key_id not found in CLUSTER_CREDENTIALS, input, vars, or secret"
+            echo "ERROR: aws_access_key_id not found in input, CLUSTER_CREDENTIALS, vars, or secret"
             exit 1
           fi
 
           # ---------------------------------------------------------------
-          # AWS_REGION: JSON -> input -> vars -> CLUSTER_REGION input
+          # AWS_REGION: input -> JSON -> vars -> CLUSTER_REGION input
           # ---------------------------------------------------------------
-          AWS_REGION=""
-          if echo "$CREDS" | jq -e '.aws_region' > /dev/null 2>&1; then
+          AWS_REGION='${{ inputs.AWS_REGION }}'
+          if [[ -z "$AWS_REGION" ]] && echo "$CREDS" | jq -e '.aws_region' > /dev/null 2>&1; then
             AWS_REGION=$(echo "$CREDS" | jq -r '.aws_region')
           fi
-          [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ inputs.AWS_REGION }}'
           [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ vars.AWS_REGION }}'
           [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ inputs.CLUSTER_REGION }}'
 
@@ -245,32 +243,30 @@ jobs:
           fi
 
           # ---------------------------------------------------------------
-          # AZURE_CLIENT_ID: JSON -> input -> vars -> secret
+          # AZURE_CLIENT_ID: input -> JSON -> vars -> secret
           # ---------------------------------------------------------------
-          CLIENT_ID=""
-          if echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
+          CLIENT_ID='${{ inputs.AZURE_CLIENT_ID }}'
+          if [[ -z "$CLIENT_ID" ]] && echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
             CLIENT_ID=$(echo "$CREDS" | jq -r '.clientId')
           fi
-          [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ inputs.AZURE_CLIENT_ID }}'
           [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ vars.AZURE_CLIENT_ID }}'
           [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ secrets.AZURE_CLIENT_ID }}'
           if [[ -z "$CLIENT_ID" ]]; then
-            echo "ERROR: clientId not found in CLUSTER_CREDENTIALS, input, vars, or secret"
+            echo "ERROR: clientId not found in input, CLUSTER_CREDENTIALS, vars, or secret"
             exit 1
           fi
 
           # ---------------------------------------------------------------
-          # AZURE_TENANT_ID: JSON -> input -> vars -> secret
+          # AZURE_TENANT_ID: input -> JSON -> vars -> secret
           # ---------------------------------------------------------------
-          TENANT_ID=""
-          if echo "$CREDS" | jq -e '.tenantId' > /dev/null 2>&1; then
+          TENANT_ID='${{ inputs.AZURE_TENANT_ID }}'
+          if [[ -z "$TENANT_ID" ]] && echo "$CREDS" | jq -e '.tenantId' > /dev/null 2>&1; then
             TENANT_ID=$(echo "$CREDS" | jq -r '.tenantId')
           fi
-          [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ inputs.AZURE_TENANT_ID }}'
           [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ vars.AZURE_TENANT_ID }}'
           [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ secrets.AZURE_TENANT_ID }}'
           if [[ -z "$TENANT_ID" ]]; then
-            echo "ERROR: tenantId not found in CLUSTER_CREDENTIALS, input, vars, or secret"
+            echo "ERROR: tenantId not found in input, CLUSTER_CREDENTIALS, vars, or secret"
             exit 1
           fi
 
