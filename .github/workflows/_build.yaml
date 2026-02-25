@@ -1,21 +1,25 @@
-name: "Build Yarn"
+name: "Build"
 
 on:
   workflow_call:
     inputs:
+      LANGUAGE:
+        description: 'Build language: go, node, or generic'
+        required: true
+        type: string
       SVC_NAME:
         description: 'Service name'
         required: true
         type: string
       BUILD_COMMAND:
-        description: 'Build command (e.g., yarn build)'
+        description: 'Build command'
         required: true
         type: string
-      NODE_VERSION:
-        description: 'Node version'
+      RUNTIME_VERSION:
+        description: 'Language runtime version (Go version or Node version)'
         required: false
         type: string
-        default: '18'
+        default: ''
       DOCKER_FILE_PATH:
         description: 'Path to Dockerfile directory'
         required: false
@@ -76,8 +80,25 @@ on:
         description: 'Image tag (usually git SHA)'
         required: true
         type: string
+      # Go-specific
+      ARTIFACT_PATH:
+        description: '[Go] Path to built artifact (relative to DOCKER_FILE_PATH)'
+        required: false
+        type: string
+        default: 'main'
+      EXTRA_DEPENDENCIES:
+        description: '[Go] Enable extra dependencies step'
+        required: false
+        type: boolean
+        default: false
+      DEPENDENCIES_COMMAND:
+        description: '[Go] Commands to install extra dependencies'
+        required: false
+        type: string
+        default: ''
+      # Node-specific
       DEPENDENCIES_FLAG:
-        description: 'Additional flags for yarn install'
+        description: '[Node] Additional flags for yarn install'
         required: false
         type: string
         default: ''
@@ -92,7 +113,7 @@ on:
         description: 'GitHub PAT for private dependencies'
         required: false
       NPM_TOKEN:
-        description: 'NPM token for private packages'
+        description: '[Node] NPM token for private packages'
         required: false
       REGISTRY_CREDENTIALS:
         description: 'Registry auth credentials (auto-detected: GCP SA JSON, AWS JSON, Azure JSON, or password/token)'
@@ -109,22 +130,81 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
+      # ============================================================
+      # GO SETUP
+      # ============================================================
+      - name: Setup Go
+        if: inputs.LANGUAGE == 'go'
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ inputs.RUNTIME_VERSION || '1.20' }}
+
+      - name: Get Go dependencies
+        if: inputs.LANGUAGE == 'go'
+        run: |
+          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global http.sslVerify false
+          go mod download
+
+      - name: Extra Go dependencies
+        if: inputs.LANGUAGE == 'go' && inputs.EXTRA_DEPENDENCIES
+        run: ${{ inputs.DEPENDENCIES_COMMAND }}
+
+      - name: Make build directory
+        if: inputs.LANGUAGE == 'go'
+        run: mkdir -p build
+
+      - name: Build Go
+        if: inputs.LANGUAGE == 'go'
+        run: |
+          directory=$(pwd)
+          cd ${{ inputs.DOCKER_FILE_PATH }}
+          ${{ inputs.BUILD_COMMAND }}
+          if [ "${{ inputs.DOCKER_FILE_PATH }}" != "." ]; then
+            mv ${{ inputs.ARTIFACT_PATH }} "$directory"
+          fi
+
+      # ============================================================
+      # NODE SETUP
+      # ============================================================
       - name: Setup Node
+        if: inputs.LANGUAGE == 'node'
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ inputs.NODE_VERSION }}
+          node-version: ${{ inputs.RUNTIME_VERSION || '18' }}
 
       - name: Configure npm registry
+        if: inputs.LANGUAGE == 'node'
         run: |
           echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
-      - name: Install dependencies
+      - name: Install Node dependencies
+        if: inputs.LANGUAGE == 'node'
         run: yarn install ${{ inputs.DEPENDENCIES_FLAG }}
 
-      - name: Build
+      - name: Build Node
+        if: inputs.LANGUAGE == 'node'
         run: ${{ inputs.BUILD_COMMAND }}
 
+      # ============================================================
+      # GENERIC SETUP
+      # ============================================================
+      - name: Log warning for generic build
+        if: inputs.LANGUAGE == 'generic'
+        run: |
+          echo "::warning::Generic build mode - skipping language-specific dependency setup."
+          echo "If your build fails, specify LANGUAGE explicitly (go or node)."
+
+      - name: Build Generic
+        if: inputs.LANGUAGE == 'generic'
+        run: |
+          cd ${{ inputs.DOCKER_FILE_PATH }}
+          ${{ inputs.BUILD_COMMAND }}
+
+      # ============================================================
+      # DOCKER BUILD AND PUSH
+      # ============================================================
       - name: Docker build and push
         uses: ./.github/actions/docker-build-push
         id: docker
@@ -137,7 +217,7 @@ jobs:
           image_tag: ${{ inputs.IMAGE_TAG }}
           dockerfile_path: ${{ inputs.DOCKER_FILE_PATH }}
           build_arguments: |
-            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+            ${{ inputs.LANGUAGE == 'node' && format('NPM_TOKEN={0}', secrets.NPM_TOKEN) || '' }}
             ${{ inputs.BUILD_ARGUMENTS }}
           registry_credentials: ${{ secrets.REGISTRY_CREDENTIALS }}
           registry_username: ${{ inputs.REGISTRY_USERNAME }}
