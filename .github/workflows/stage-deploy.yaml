@@ -3,34 +3,138 @@ name: "Stage Deploy"
 on:
   workflow_call:
     inputs:
-      # Required inputs
+      # ============================================================
+      # SERVICE
+      # ============================================================
       SVC_NAME:
         description: 'Service name (k8s deployment/cronjob name)'
         required: true
         type: string
+
+      # ============================================================
+      # BUILD
+      # ============================================================
       BUILD_COMMAND:
         description: 'Build command (e.g., go build -o main ./cmd/... or yarn build)'
         required: true
         type: string
       LANGUAGE:
-        description: 'Build type: go or node (auto-detected from BUILD_COMMAND if not specified)'
+        description: 'Build language: go, node, or generic (auto-detected from BUILD_COMMAND if not specified)'
         required: false
         type: string
         default: ''
-
-      # Optional inputs with defaults
-      TYPE:
-        description: 'deployment or cron'
-        required: false
-        type: string
-        default: 'deployment'
       DOCKER_FILE_PATH:
         description: 'Path to Dockerfile directory'
         required: false
         type: string
         default: '.'
+      BUILD_ARGUMENTS:
+        description: 'Docker build arguments'
+        required: false
+        type: string
+        default: ''
+
+      # ============================================================
+      # BUILD - Go specific
+      # ============================================================
+      GO_VERSION:
+        description: 'Go version'
+        required: false
+        type: string
+        default: '1.20'
+      ARTIFACT_PATH:
+        description: 'Path to built artifact'
+        required: false
+        type: string
+        default: 'main'
+      EXTRA_DEPENDENCIES:
+        description: 'Enable extra dependencies step'
+        required: false
+        type: boolean
+        default: false
+      DEPENDENCIES_COMMAND:
+        description: 'Commands to install extra dependencies'
+        required: false
+        type: string
+        default: ''
+
+      # ============================================================
+      # BUILD - Node specific
+      # ============================================================
+      NODE_VERSION:
+        description: 'Node version'
+        required: false
+        type: string
+        default: '18'
+      DEPENDENCIES_FLAG:
+        description: 'Additional flags for yarn install'
+        required: false
+        type: string
+        default: ''
+
+      # ============================================================
+      # REGISTRY
+      # ============================================================
+      REGISTRY_TYPE:
+        description: 'Registry provider: gar, gcr, ecr, acr, dockerhub, ghcr, custom (auto-detected from IMAGE_REGISTRY)'
+        required: false
+        type: string
+        default: ''
+      IMAGE_REGISTRY:
+        description: 'Registry URL (required for gar/ecr/acr/custom, auto-set for gcr/dockerhub/ghcr)'
+        required: false
+        type: string
+        default: ''
+      REGISTRY_PROJECT:
+        description: 'Project/namespace within registry'
+        required: false
+        type: string
+        default: ''
+      REGISTRY_REPO:
+        description: 'Repository name within project'
+        required: false
+        type: string
+        default: ''
+
+      # ============================================================
+      # CLUSTER
+      # ============================================================
+      CLUSTER_PROJECT:
+        description: 'GCP project (required for GKE)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_NAME:
+        description: 'Kubernetes cluster name (required for GKE/EKS/AKS)'
+        required: false
+        type: string
+        default: ''
+      CLUSTER_REGION:
+        description: 'Cluster region (required for GKE/EKS)'
+        required: false
+        type: string
+        default: ''
+      AZURE_RESOURCE_GROUP:
+        description: 'Azure resource group (required for AKS)'
+        required: false
+        type: string
+        default: ''
+
+      # ============================================================
+      # DEPLOY
+      # ============================================================
+      NAMESPACE:
+        description: 'Kubernetes namespace'
+        required: false
+        type: string
+        default: ''
+      TYPE:
+        description: 'Workload type: deployment or cron'
+        required: false
+        type: string
+        default: 'deployment'
       DEPLOY_METHOD:
-        description: 'kubectl or helm'
+        description: 'Deploy method: kubectl or helm'
         required: false
         type: string
         default: 'kubectl'
@@ -39,134 +143,53 @@ on:
         required: false
         type: string
         default: ''
+
+      # ============================================================
+      # CONFIGMAP
+      # ============================================================
       ENV_FILE_PATH:
-        description: 'Path to env file. Empty string skips configmap. Default: configs/.stage.env'
+        description: 'Path to env file (empty string skips configmap)'
         required: false
         type: string
         default: '__default__'
-      BUILD_ARGUMENTS:
-        description: 'Docker build arguments'
-        required: false
-        type: string
-        default: ''
       REACT_APP:
         description: 'Enable React-specific configmap format'
         required: false
         type: boolean
         default: false
 
-      # Go-specific inputs
-      GO_VERSION:
-        description: 'Go version (for LANGUAGE=go)'
-        required: false
-        type: string
-        default: '1.20'
-      ARTIFACT_PATH:
-        description: 'Path to built artifact (for LANGUAGE=go)'
-        required: false
-        type: string
-        default: 'main'
-      EXTRA_DEPENDENCIES:
-        description: 'Enable extra dependencies step (for LANGUAGE=go)'
-        required: false
-        type: boolean
-        default: false
-      DEPENDENCIES_COMMAND:
-        description: 'Commands to install extra dependencies (for LANGUAGE=go)'
-        required: false
-        type: string
-        default: ''
-
-      # Node-specific inputs
-      NODE_VERSION:
-        description: 'Node version (for LANGUAGE=node)'
-        required: false
-        type: string
-        default: '18'
-      DEPENDENCIES_FLAG:
-        description: 'Additional flags for yarn install (for LANGUAGE=node)'
-        required: false
-        type: string
-        default: ''
-
-      # Registry inputs (provider-agnostic)
-      REGISTRY_TYPE:
-        description: 'Registry provider: gar, gcr, ecr, acr, dockerhub, ghcr, custom. Auto-detected from IMAGE_REGISTRY if not provided'
-        required: false
-        type: string
-        default: ''
-      IMAGE_REGISTRY:
-        description: 'Container registry URL. REGISTRY_TYPE is auto-detected from URL pattern. Required for gar/ecr/acr/custom'
-        required: false
-        type: string
-        default: ''
-      REGISTRY_PROJECT:
-        description: 'Project/account/namespace within registry. Used for image path construction. Falls back to vars.REGISTRY_PROJECT'
-        required: false
-        type: string
-        default: ''
-      REGISTRY_REPO:
-        description: 'Repository name within project. Used for image path construction. Falls back to vars.REGISTRY_REPO or vars.APP_NAME'
-        required: false
-        type: string
-        default: ''
-
-      # Cluster auth inputs (multi-cloud)
-      CLUSTER_PROJECT:
-        description: 'GCP project for cluster. Required for GKE auth. Falls back to vars.CLUSTER_PROJECT'
-        required: false
-        type: string
-        default: ''
-      CLUSTER_NAME:
-        description: 'Kubernetes cluster name. Required for GKE/EKS/AKS auth. Falls back to vars.CLUSTER_NAME'
-        required: false
-        type: string
-        default: ''
-      CLUSTER_REGION:
-        description: 'Cluster region. Required for GKE/EKS auth. Falls back to vars.CLUSTER_REGION, then vars.AWS_REGION (default: us-central1)'
-        required: false
-        type: string
-        default: ''
-      AZURE_RESOURCE_GROUP:
-        description: 'Azure resource group. Required for AKS auth. Falls back to vars.AZURE_RESOURCE_GROUP'
-        required: false
-        type: string
-        default: ''
-      NAMESPACE:
-        description: 'Kubernetes namespace. Falls back to vars.STAGE_NAMESPACE or {APP_NAME}-stage'
-        required: false
-        type: string
-        default: ''
-
     secrets:
+      # ============================================================
+      # BUILD SECRETS
+      # ============================================================
       PAT:
         description: 'GitHub PAT for private dependencies'
         required: false
       NPM_TOKEN:
-        description: 'NPM token for private packages (for LANGUAGE=node)'
+        description: 'NPM token for private packages (Node builds)'
         required: false
+
+      # ============================================================
+      # REGISTRY SECRETS
+      # ============================================================
       REGISTRY_CREDENTIALS:
-        description: 'Registry auth credentials (auto-detected: GCP SA JSON, AWS JSON, Azure JSON, or password/token)'
+        description: 'Registry auth (GCP SA JSON, AWS JSON, Azure JSON, or token)'
         required: false
+
+      # ============================================================
+      # CLUSTER SECRETS
+      # ============================================================
       STAGE_CLUSTER_CREDENTIALS:
-        description: 'Stage cluster auth credentials (auto-detected: GCP SA key, AWS JSON, Azure JSON, or base64 kubeconfig)'
+        description: 'Stage cluster auth (GCP SA JSON, AWS JSON, Azure JSON, or base64 kubeconfig)'
         required: false
       CLUSTER_CREDENTIALS:
-        description: 'Fallback cluster auth credentials (used if STAGE_CLUSTER_CREDENTIALS not provided)'
-        required: false
-      # Legacy support
-      GAR_KEY:
-        description: 'Deprecated: Use REGISTRY_CREDENTIALS instead'
-        required: false
-      STAGE_DEPLOY_KEY:
-        description: 'Deprecated: Use CLUSTER_CREDENTIALS instead'
-        required: false
-      DEPLOY_KEY:
-        description: 'Deprecated: Use CLUSTER_CREDENTIALS instead'
+        description: 'Fallback cluster auth (used if STAGE_CLUSTER_CREDENTIALS not provided)'
         required: false
 
 jobs:
-  # Resolve registry configuration
+  # ============================================================
+  # RESOLVE CONFIGURATION
+  # ============================================================
   resolve-registry:
     uses: ./.github/workflows/_resolve-registry-config.yaml
     with:
@@ -175,7 +198,6 @@ jobs:
       REGISTRY_PROJECT: ${{ inputs.REGISTRY_PROJECT }}
       REGISTRY_REPO: ${{ inputs.REGISTRY_REPO }}
 
-  # Resolve deploy configuration (cluster, namespace, env file)
   resolve-deploy:
     uses: ./.github/workflows/_resolve-deploy-config.yaml
     with:
@@ -187,14 +209,15 @@ jobs:
       NAMESPACE: ${{ inputs.NAMESPACE }}
       ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
 
-  # Detect language from build command
   detect-language:
     uses: ./.github/workflows/_detect-language.yaml
     with:
       BUILD_COMMAND: ${{ inputs.BUILD_COMMAND }}
       LANGUAGE: ${{ inputs.LANGUAGE }}
 
-  # Check what changed
+  # ============================================================
+  # CHECK CHANGES
+  # ============================================================
   check-changes:
     needs: resolve-deploy
     if: github.ref == 'refs/heads/development'
@@ -202,7 +225,9 @@ jobs:
     with:
       ENV_FILE_PATH: ${{ needs.resolve-deploy.outputs.env_file_path }}
 
-  # Build
+  # ============================================================
+  # BUILD
+  # ============================================================
   build:
     needs: [resolve-registry, detect-language, check-changes]
     if: needs.check-changes.outputs.deployment == 'true'
@@ -219,18 +244,18 @@ jobs:
       REGISTRY_PROJECT: ${{ needs.resolve-registry.outputs.registry_project }}
       REGISTRY_REPO: ${{ needs.resolve-registry.outputs.registry_repo }}
       IMAGE_TAG: ${{ github.sha }}
-      # Go-specific
       ARTIFACT_PATH: ${{ inputs.ARTIFACT_PATH }}
       EXTRA_DEPENDENCIES: ${{ inputs.EXTRA_DEPENDENCIES }}
       DEPENDENCIES_COMMAND: ${{ inputs.DEPENDENCIES_COMMAND }}
-      # Node-specific
       DEPENDENCIES_FLAG: ${{ inputs.DEPENDENCIES_FLAG }}
     secrets:
       PAT: ${{ secrets.PAT }}
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      REGISTRY_CREDENTIALS: ${{ secrets.REGISTRY_CREDENTIALS || secrets.GAR_KEY }}
+      REGISTRY_CREDENTIALS: ${{ secrets.REGISTRY_CREDENTIALS }}
 
-  # Deploy to stage
+  # ============================================================
+  # DEPLOY
+  # ============================================================
   deploy:
     needs: [resolve-deploy, check-changes, build]
     if: |
@@ -252,10 +277,12 @@ jobs:
       DEPLOY_METHOD: ${{ inputs.DEPLOY_METHOD }}
       HELM_VALUES_PATH: ${{ inputs.HELM_VALUES_PATH }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS }}
       PAT: ${{ secrets.PAT }}
 
-  # Update configmap after deployment
+  # ============================================================
+  # UPDATE CONFIGMAP
+  # ============================================================
   update-configmap:
     needs: [resolve-deploy, check-changes, deploy]
     if: |
@@ -277,9 +304,8 @@ jobs:
       REACT_APP: ${{ inputs.REACT_APP }}
       ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-deploy.outputs.env_file_explicit == 'true' }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS }}
 
-  # Update configmap only (when only env file changed)
   update-configmap-only:
     needs: [resolve-deploy, check-changes]
     if: |
@@ -300,4 +326,4 @@ jobs:
       REACT_APP: ${{ inputs.REACT_APP }}
       ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-deploy.outputs.env_file_explicit == 'true' }}
     secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS || secrets.STAGE_DEPLOY_KEY || secrets.DEPLOY_KEY }}
+      CLUSTER_CREDENTIALS: ${{ secrets.STAGE_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS }}
