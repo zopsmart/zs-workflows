@@ -37,9 +37,9 @@ This document describes the internal structure and configuration of the deployme
 │           │          ┌──────────────────┐                                        │
 │           │          │   BUILD PHASE    │                                        │
 │           │          │  ┌────────────┐  │                                        │
-│           │          │  │_build-go   │  │  Go: go mod download → build → docker │
-│           │          │  │_build-yarn │  │  Node: yarn install → build → docker  │
-│           │          │  │_build-generic│ │  Other: build → docker               │
+│           │          │  │  _build    │  │  LANGUAGE=go: go mod download → build │
+│           │          │  │            │  │  LANGUAGE=node: yarn install → build  │
+│           │          │  │            │  │  LANGUAGE=generic: build only         │
 │           │          │  └─────┬──────┘  │                                        │
 │           │          │        │         │                                        │
 │           │          │        ▼         │                                        │
@@ -229,14 +229,22 @@ jobs:
 
 | Workflow | Description |
 |----------|-------------|
-| `_build-go.yaml` | Build Go app and push Docker image |
-| `_build-yarn.yaml` | Build Node/Yarn app and push Docker image |
-| `_build-generic.yaml` | Build any app without language-specific setup |
+| `_build.yaml` | Build app (Go/Node/generic) and push Docker image |
 | `_retag-image.yaml` | Retag existing image with new tag |
 | `_deploy.yaml` | Deploy image to Kubernetes |
 | `_update-configmap.yaml` | Update Kubernetes ConfigMap from env file |
 | `_check-changes.yaml` | Detect code vs config changes |
-| `_validate-cluster-auth.yaml` | Validate and authenticate to cluster |
+| `_resolve-registry-config.yaml` | Resolve registry type and URL from inputs/vars |
+| `_resolve-deploy-config.yaml` | Resolve cluster/namespace config from inputs/vars |
+
+### Composite Actions
+
+| Action | Description |
+|--------|-------------|
+| `docker-build-push` | Build and push Docker image to any registry |
+| `registry-login` | Authenticate to container registry (GAR/GCR/ECR/ACR/DockerHub/GHCR) |
+| `cluster-auth` | Authenticate to Kubernetes cluster (GKE/EKS/AKS/kubeconfig) |
+| `resolve-image-path` | Resolve registry URL and construct image path |
 
 ## Language Auto-Detection
 
@@ -246,13 +254,13 @@ The `LANGUAGE` input is optional. The workflow automatically detects the languag
 |----------------------|-------------------|
 | Contains `go build`, `go run`, `go test`, `go install` | `go` |
 | Contains `yarn` or `npm` | `node` |
-| Other | `unknown` (skips dependency setup) |
+| Other | `generic` (skips dependency setup) |
 
 **Examples:**
 - `go build -o main ./cmd/...` → Detected as `go`
 - `yarn build` → Detected as `node`
 - `npm run build` → Detected as `node`
-- `make build` → Detected as `unknown` (warning logged, skips `go mod download`/`yarn install`)
+- `make build` → Detected as `generic` (warning logged, skips `go mod download`/`yarn install`)
 
 If language cannot be detected, the workflow logs a warning and continues without language-specific dependency initialization. The Docker build still runs normally, so you can handle dependencies in your Dockerfile.
 
