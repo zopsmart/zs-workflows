@@ -110,8 +110,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: 🧪 Test and linters
-    if: ${{ github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main' || (github.event_name == 'pull_request_review' &&
-      github.event.review.state == 'approved') }}
+    if: (github.ref == 'refs/heads/development') || (github.ref == 'refs/heads/main')  || github.event.review.state == 'approved'
     outputs:
       sha: ${{ steps.output-sha.outputs.sha }}
     services:
