@@ -1,22 +1,21 @@
-# Example: Go service with Azure Container Registry (ACR) + Azure Kubernetes Service (AKS)
+# Azure Container Registry (ACR) + Azure Kubernetes Service (AKS)
 #
-# This example pushes images to ACR and deploys to an AKS cluster.
+# BUILD_COMMAND examples:
+#   Go:   'go build -o main ./cmd/...'
+#   Node: 'yarn build'
 #
-# Auto-detection:
-#   - REGISTRY_TYPE: auto-detected as 'acr' from IMAGE_REGISTRY URL (*.azurecr.io)
-#   - Cluster auth: auto-detected as 'aks' from Azure JSON (clientSecret present)
+# For React/frontend apps, add: REACT_APP: true
 #
 # Required repository variables (vars.*):
 #   APP_NAME: "my-service"
 #
 # Required repository secrets (secrets.*):
-#   REGISTRY_CREDENTIALS: Azure Service Principal JSON for ACR access
+#   REGISTRY_CREDENTIALS: Azure Service Principal JSON
 #     Format: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
-#   CLUSTER_CREDENTIALS: Azure Service Principal JSON for AKS access (can be same as above)
+#   CLUSTER_CREDENTIALS: Azure Service Principal JSON (can be same as REGISTRY_CREDENTIALS)
 #     Format: {"clientId": "...", "clientSecret": "...", "tenantId": "..."}
-#   PAT: GitHub Personal Access Token (optional, for private dependencies)
-#
-# Note: CLUSTER_NAME and AZURE_RESOURCE_GROUP are required for AKS cluster authentication.
+#   PAT: GitHub PAT (optional, for private dependencies)
+#   NPM_TOKEN: NPM token (optional, for Node private packages)
 
 name: Deploy
 
@@ -32,12 +31,11 @@ jobs:
     uses: zopsmart/zs-workflows/.github/workflows/stage-deploy.yaml@main
     with:
       SVC_NAME: my-service
-      BUILD_COMMAND: 'go build -o main ./cmd/...'
-      # Registry: REGISTRY_TYPE auto-detected as 'acr' from URL
+      BUILD_COMMAND: 'go build -o main ./cmd/...'  # or 'yarn build'
       IMAGE_REGISTRY: myregistry.azurecr.io
-      # Cluster config
       CLUSTER_NAME: my-aks-cluster
       AZURE_RESOURCE_GROUP: my-resource-group
+      # REACT_APP: true  # Uncomment for React/frontend apps
     secrets: inherit
 
   prod:
@@ -48,4 +46,5 @@ jobs:
       IMAGE_REGISTRY: myregistry.azurecr.io
       CLUSTER_NAME: my-aks-cluster
       AZURE_RESOURCE_GROUP: my-resource-group
+      # REACT_APP: true  # Uncomment for React/frontend apps
     secrets: inherit

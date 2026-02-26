@@ -29,7 +29,7 @@ This document describes the internal structure and configuration of the deployme
 │           │                                                                       │
 │           ▼                                                                       │
 │  ┌──────────────────┐                                                            │
-│  │ _check-changes   │  Detect: code changes vs env file changes                  │
+│  │ _check-changes   │  Detect code vs env changes, generate ConfigMap artifact   │
 │  └────────┬─────────┘                                                            │
 │           │                                                                       │
 │           ├─── code changed? ───┐                                                │
@@ -51,14 +51,13 @@ This document describes the internal structure and configuration of the deployme
 │           │                   │                                                   │
 │           │                   ▼                                                   │
 │           │          ┌──────────────────┐                                        │
-│           │          │    _deploy       │  Multi-cloud: GKE/EKS/AKS/kubeconfig  │
-│           │          └────────┬─────────┘                                        │
-│           │                   │                                                   │
-│           ├───────────────────┤                                                   │
-│           │                   ▼                                                   │
+│           │          │    _deploy       │  Deploy + apply ConfigMap artifact     │
+│           │          └──────────────────┘                                        │
+│           │                                                                       │
+│           │ (env changed only)                                                    │
 │           │          ┌──────────────────┐                                        │
-│           └─────────►│_update-configmap │  Update K8s ConfigMap from env file   │
-│      (env changed)   └──────────────────┘                                        │
+│           └─────────►│_update-configmap │  Apply ConfigMap artifact only         │
+│                      └──────────────────┘                                        │
 │                                                                                   │
 └──────────────────────────────────────────────────────────────────────────────────┘
 
@@ -71,18 +70,23 @@ This document describes the internal structure and configuration of the deployme
 │           │                                                                       │
 │           ▼                                                                       │
 │  ┌──────────────────┐                                                            │
-│  │  _retag-image    │  Retag SHA image → release version (v1.0.0)               │
+│  │  validate-tag    │  Validate semver tag is latest and ahead                   │
 │  └────────┬─────────┘                                                            │
 │           │                                                                       │
-│           ▼                                                                       │
-│  ┌──────────────────┐                                                            │
-│  │    _deploy       │  Deploy to production cluster                              │
-│  └────────┬─────────┘                                                            │
-│           │                                                                       │
-│           ▼                                                                       │
-│  ┌──────────────────┐                                                            │
-│  │_update-configmap │  Update prod ConfigMap                                     │
-│  └──────────────────┘                                                            │
+│           ├───────────────────┬───────────────────┐                              │
+│           │                   │                   │                              │
+│           ▼                   ▼                   │                              │
+│  ┌──────────────────┐  ┌──────────────────┐      │                              │
+│  │  _retag-image    │  │ _check-changes   │      │                              │
+│  │ SHA → v1.0.0     │  │ Generate ConfigMap│      │                              │
+│  └────────┬─────────┘  │    artifact       │      │                              │
+│           │            └────────┬──────────┘      │                              │
+│           │                     │                 │                              │
+│           ▼                     ▼                 │                              │
+│  ┌──────────────────────────────────────────┐    │                              │
+│  │              _deploy                      │◄───┘                              │
+│  │  Deploy to prod + apply ConfigMap artifact│                                   │
+│  └──────────────────────────────────────────┘                                   │
 │                                                                                   │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -246,6 +250,9 @@ jobs:
 | `registry-login` | Authenticate to container registry (GAR/GCR/ECR/ACR/DockerHub/GHCR) |
 | `cluster-auth` | Authenticate to Kubernetes cluster (GKE/EKS/AKS/kubeconfig) |
 | `resolve-image-path` | Resolve registry URL and construct image path |
+| `generate-configmap` | Generate ConfigMap YAML from env file (no apply) |
+| `apply-configmap` | Download and apply ConfigMap from artifact |
+| `validate-tag` | Validate semver tag is latest and ahead |
 
 ## Language Auto-Detection
 
