@@ -15,7 +15,12 @@ on:
         description: 'Path to env file'
         required: true
         type: string
-      # GKE inputs (required when using GKE)
+      ENVIRONMENT:
+        description: 'Environment name (stage, prod). Used for logging'
+        required: false
+        type: string
+        default: ''
+      # Cluster auth inputs
       CLUSTER_PROJECT:
         description: 'GCP project for cluster. Required for GKE auth'
         required: false
@@ -27,37 +32,16 @@ on:
         type: string
         default: ''
       CLUSTER_REGION:
-        description: 'Cluster region. Required for GKE auth'
-        required: false
-        type: string
-        default: 'us-central1'
-      # EKS inputs (required when using EKS)
-      AWS_REGION:
-        description: 'AWS region. Required for EKS (via input, CLUSTER_CREDENTIALS JSON, vars, or CLUSTER_REGION)'
+        description: 'Cluster region. Required for GKE/EKS auth'
         required: false
         type: string
         default: ''
-      AWS_ACCESS_KEY_ID:
-        description: 'AWS access key ID. Required for EKS (via input, CLUSTER_CREDENTIALS JSON, vars, or secrets)'
-        required: false
-        type: string
-        default: ''
-      # AKS inputs (required when using AKS)
       AZURE_RESOURCE_GROUP:
         description: 'Azure resource group. Required for AKS auth'
         required: false
         type: string
         default: ''
-      AZURE_CLIENT_ID:
-        description: 'Azure client ID. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or secrets)'
-        required: false
-        type: string
-        default: ''
-      AZURE_TENANT_ID:
-        description: 'Azure tenant ID. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or secrets)'
-        required: false
-        type: string
-        default: ''
+      # Configmap options
       REACT_APP:
         description: 'Enable React-specific configmap format'
         required: false
@@ -71,23 +55,8 @@ on:
 
     secrets:
       CLUSTER_CREDENTIALS:
-        description: 'Cluster auth credentials. Auto-detected format: GCP SA JSON, AWS JSON, Azure JSON, base64 kubeconfig, or raw secret'
+        description: 'Cluster auth credentials. Auto-detected format: GCP SA JSON, AWS JSON, Azure JSON, base64 kubeconfig'
         required: true
-      AWS_SECRET_ACCESS_KEY:
-        description: 'AWS secret access key. Required for EKS (via CLUSTER_CREDENTIALS JSON/raw or this secret)'
-        required: false
-      AWS_ACCESS_KEY_ID:
-        description: 'AWS access key ID as secret. Required for EKS (via input, CLUSTER_CREDENTIALS JSON, vars, or this secret)'
-        required: false
-      AZURE_CLIENT_SECRET:
-        description: 'Azure client secret. Required for AKS (via CLUSTER_CREDENTIALS JSON/raw or this secret)'
-        required: false
-      AZURE_CLIENT_ID:
-        description: 'Azure client ID as secret. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or this secret)'
-        required: false
-      AZURE_TENANT_ID:
-        description: 'Azure tenant ID as secret. Required for AKS (via input, CLUSTER_CREDENTIALS JSON, vars, or this secret)'
-        required: false
 
 jobs:
   update_configmap:
@@ -125,170 +94,16 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
         shell: bash
 
-      - name: Detect credential type
-        id: detect
+      - name: Authenticate to cluster
         if: steps.validate.outputs.skip != 'true'
-        run: |
-          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
-
-          # Detect auth method from credentials and inputs
-          AUTH_METHOD=""
-
-          # 1. Check JSON credential format
-          if echo "$CREDS" | jq -e '.type == "service_account"' > /dev/null 2>&1; then
-            AUTH_METHOD="gke"
-          elif echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
-            AUTH_METHOD="eks"
-          elif echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
-            AUTH_METHOD="aks"
-          elif echo "$CREDS" | base64 -d 2>/dev/null | grep -q "kind: Config"; then
-            AUTH_METHOD="kubeconfig"
-          fi
-
-          # 2. Infer from inputs/vars/secrets if not detected from JSON
-          if [[ -z "$AUTH_METHOD" ]]; then
-            if [[ -n "${{ inputs.AWS_ACCESS_KEY_ID }}" || -n "${{ vars.AWS_ACCESS_KEY_ID }}" || -n "${{ secrets.AWS_ACCESS_KEY_ID }}" || -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
-              AUTH_METHOD="eks"
-            elif [[ -n "${{ inputs.AZURE_CLIENT_ID }}" || -n "${{ vars.AZURE_CLIENT_ID }}" || -n "${{ secrets.AZURE_CLIENT_ID }}" || -n "${{ secrets.AZURE_CLIENT_SECRET }}" ]]; then
-              AUTH_METHOD="aks"
-            elif [[ -n "${{ inputs.CLUSTER_PROJECT }}" || -n "${{ vars.CLUSTER_PROJECT }}" ]]; then
-              AUTH_METHOD="gke"
-            else
-              AUTH_METHOD="kubeconfig"
-            fi
-          fi
-
-          echo "auth_method=$AUTH_METHOD" >> "$GITHUB_OUTPUT"
-        shell: bash
-
-      # Auth to GKE
-      - name: Auth to GKE
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'gke'
-        uses: google-github-actions/auth@v3
+        uses: ./.github/actions/cluster-auth
         with:
-          credentials_json: ${{ secrets.CLUSTER_CREDENTIALS }}
-
-      - name: Setup gcloud CLI
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'gke'
-        uses: google-github-actions/setup-gcloud@v3
-
-      - name: Get GKE credentials
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'gke'
-        run: |
-          gcloud container clusters get-credentials ${{ inputs.CLUSTER_NAME }} \
-            --region=${{ inputs.CLUSTER_REGION }} \
-            --project=${{ inputs.CLUSTER_PROJECT }}
-
-      # Auth to EKS
-      - name: Configure AWS credentials for EKS
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'eks'
-        run: |
-          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
-
-          # AWS_SECRET_ACCESS_KEY: JSON -> raw CLUSTER_CREDENTIALS -> secret
-          AWS_SECRET_ACCESS_KEY=""
-          if echo "$CREDS" | jq -e '.aws_secret_access_key' > /dev/null 2>&1; then
-            AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.aws_secret_access_key')
-          elif [[ -n "$CREDS" && ! "$CREDS" =~ ^\{.*\}$ ]]; then
-            AWS_SECRET_ACCESS_KEY="$CREDS"
-          fi
-          [[ -z "$AWS_SECRET_ACCESS_KEY" ]] && AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
-          if [[ -z "$AWS_SECRET_ACCESS_KEY" ]]; then
-            echo "ERROR: aws_secret_access_key not found in CLUSTER_CREDENTIALS or AWS_SECRET_ACCESS_KEY secret"
-            exit 1
-          fi
-
-          # AWS_ACCESS_KEY_ID: input -> JSON -> vars -> secret
-          AWS_ACCESS_KEY_ID='${{ inputs.AWS_ACCESS_KEY_ID }}'
-          if [[ -z "$AWS_ACCESS_KEY_ID" ]] && echo "$CREDS" | jq -e '.aws_access_key_id' > /dev/null 2>&1; then
-            AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.aws_access_key_id')
-          fi
-          [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ vars.AWS_ACCESS_KEY_ID }}'
-          [[ -z "$AWS_ACCESS_KEY_ID" ]] && AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
-          if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
-            echo "ERROR: aws_access_key_id not found in input, CLUSTER_CREDENTIALS, vars, or secret"
-            exit 1
-          fi
-
-          # AWS_REGION: input -> JSON -> vars -> CLUSTER_REGION input
-          AWS_REGION='${{ inputs.AWS_REGION }}'
-          if [[ -z "$AWS_REGION" ]] && echo "$CREDS" | jq -e '.aws_region' > /dev/null 2>&1; then
-            AWS_REGION=$(echo "$CREDS" | jq -r '.aws_region')
-          fi
-          [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ vars.AWS_REGION }}'
-          [[ -z "$AWS_REGION" ]] && AWS_REGION='${{ inputs.CLUSTER_REGION }}'
-
-          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-          aws configure set region "$AWS_REGION"
-
-          echo "aws_region=$AWS_REGION" >> "$GITHUB_ENV"
-        shell: bash
-
-      - name: Get EKS credentials
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'eks'
-        run: |
-          aws eks update-kubeconfig --name ${{ inputs.CLUSTER_NAME }} --region ${{ env.aws_region }}
-
-      # Auth to AKS
-      - name: Azure Login for AKS
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'aks'
-        run: |
-          CREDS='${{ secrets.CLUSTER_CREDENTIALS }}'
-
-          # AZURE_CLIENT_SECRET: JSON -> raw CLUSTER_CREDENTIALS -> secret
-          CLIENT_SECRET=""
-          if echo "$CREDS" | jq -e '.clientSecret' > /dev/null 2>&1; then
-            CLIENT_SECRET=$(echo "$CREDS" | jq -r '.clientSecret')
-          elif [[ -n "$CREDS" && ! "$CREDS" =~ ^\{.*\}$ ]]; then
-            CLIENT_SECRET="$CREDS"
-          fi
-          [[ -z "$CLIENT_SECRET" ]] && CLIENT_SECRET='${{ secrets.AZURE_CLIENT_SECRET }}'
-          if [[ -z "$CLIENT_SECRET" ]]; then
-            echo "ERROR: clientSecret not found in CLUSTER_CREDENTIALS or AZURE_CLIENT_SECRET secret"
-            exit 1
-          fi
-
-          # AZURE_CLIENT_ID: input -> JSON -> vars -> secret
-          CLIENT_ID='${{ inputs.AZURE_CLIENT_ID }}'
-          if [[ -z "$CLIENT_ID" ]] && echo "$CREDS" | jq -e '.clientId' > /dev/null 2>&1; then
-            CLIENT_ID=$(echo "$CREDS" | jq -r '.clientId')
-          fi
-          [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ vars.AZURE_CLIENT_ID }}'
-          [[ -z "$CLIENT_ID" ]] && CLIENT_ID='${{ secrets.AZURE_CLIENT_ID }}'
-          if [[ -z "$CLIENT_ID" ]]; then
-            echo "ERROR: clientId not found in input, CLUSTER_CREDENTIALS, vars, or secret"
-            exit 1
-          fi
-
-          # AZURE_TENANT_ID: input -> JSON -> vars -> secret
-          TENANT_ID='${{ inputs.AZURE_TENANT_ID }}'
-          if [[ -z "$TENANT_ID" ]] && echo "$CREDS" | jq -e '.tenantId' > /dev/null 2>&1; then
-            TENANT_ID=$(echo "$CREDS" | jq -r '.tenantId')
-          fi
-          [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ vars.AZURE_TENANT_ID }}'
-          [[ -z "$TENANT_ID" ]] && TENANT_ID='${{ secrets.AZURE_TENANT_ID }}'
-          if [[ -z "$TENANT_ID" ]]; then
-            echo "ERROR: tenantId not found in input, CLUSTER_CREDENTIALS, vars, or secret"
-            exit 1
-          fi
-
-          az login --service-principal -u "$CLIENT_ID" -p "$CLIENT_SECRET" --tenant "$TENANT_ID"
-        shell: bash
-
-      - name: Get AKS credentials
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'aks'
-        run: |
-          az aks get-credentials --name ${{ inputs.CLUSTER_NAME }} \
-            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
-
-      # Auth via kubeconfig
-      - name: Setup kubeconfig
-        if: steps.validate.outputs.skip != 'true' && steps.detect.outputs.auth_method == 'kubeconfig'
-        run: |
-          mkdir -p ~/.kube
-          echo '${{ secrets.CLUSTER_CREDENTIALS }}' | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          environment: ${{ inputs.ENVIRONMENT || inputs.NAMESPACE }}
+          credentials: ${{ secrets.CLUSTER_CREDENTIALS }}
+          cluster_name: ${{ inputs.CLUSTER_NAME }}
+          cluster_region: ${{ inputs.CLUSTER_REGION }}
+          cluster_project: ${{ inputs.CLUSTER_PROJECT }}
+          azure_resource_group: ${{ inputs.AZURE_RESOURCE_GROUP }}
 
       - name: Generate ConfigMap YAML
         if: steps.validate.outputs.skip != 'true'
