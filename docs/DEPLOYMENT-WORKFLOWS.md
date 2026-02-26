@@ -234,6 +234,7 @@ jobs:
 | `_deploy.yaml` | Deploy image to Kubernetes |
 | `_update-configmap.yaml` | Update Kubernetes ConfigMap from env file |
 | `_check-changes.yaml` | Detect code vs config changes |
+| `_detect-language.yaml` | Auto-detect build language from BUILD_COMMAND |
 | `_resolve-registry-config.yaml` | Resolve registry type and URL from inputs/vars |
 | `_resolve-deploy-config.yaml` | Resolve cluster/namespace config from inputs/vars |
 
