@@ -62,6 +62,12 @@ on:
         required: false
         type: string
         default: ''
+      # ConfigMap options
+      CONFIGMAP_ARTIFACT:
+        description: 'Artifact name containing ConfigMap (empty skips)'
+        required: false
+        type: string
+        default: ''
 
     secrets:
       CLUSTER_CREDENTIALS:
@@ -120,3 +126,11 @@ jobs:
       - name: Set App Version
         if: inputs.APP_VERSION != '' && inputs.TYPE == 'deployment'
         run: kubectl set env deployment/${{ inputs.SVC_NAME }} APP_VERSION=${{ inputs.APP_VERSION }} -n ${{ inputs.NAMESPACE }}
+
+      # Apply ConfigMap (if artifact provided)
+      - name: Apply ConfigMap
+        if: inputs.CONFIGMAP_ARTIFACT != ''
+        uses: ./.github/actions/apply-configmap
+        with:
+          artifact_name: ${{ inputs.CONFIGMAP_ARTIFACT }}
+          namespace: ${{ inputs.NAMESPACE }}

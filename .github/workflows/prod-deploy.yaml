@@ -148,10 +148,58 @@ jobs:
       ENV_FILE_PATH: ${{ inputs.ENV_FILE_PATH }}
 
   # ============================================================
+  # VALIDATE TAG
+  # ============================================================
+  validate-tag:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    outputs:
+      valid: ${{ steps.validate.outputs.valid }}
+      previous_tag: ${{ steps.validate.outputs.previous_tag }}
+      error: ${{ steps.validate.outputs.error }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag
+        id: validate
+        uses: ./.github/actions/validate-tag
+        with:
+          tag: ${{ github.ref_name }}
+
+      - name: Fail if invalid
+        if: steps.validate.outputs.valid != 'true'
+        run: |
+          echo "::error::${{ steps.validate.outputs.error }}"
+          exit 1
+
+  # ============================================================
+  # CHECK CHANGES
+  # ============================================================
+  check-changes:
+    needs: [resolve-deploy, validate-tag]
+    if: |
+      always() &&
+      startsWith(github.ref, 'refs/tags/v') &&
+      needs.validate-tag.outputs.valid == 'true'
+    uses: zopsmart/zs-workflows/.github/workflows/_check-changes.yaml@main
+    with:
+      ENV_FILE_PATH: ${{ needs.resolve-deploy.outputs.env_file_path }}
+      SVC_NAME: ${{ inputs.SVC_NAME }}
+      REACT_APP: ${{ inputs.REACT_APP }}
+      COMPARE_MODE: tag
+      PREVIOUS_TAG: ${{ needs.validate-tag.outputs.previous_tag }}
+
+  # ============================================================
   # RETAG IMAGE
   # ============================================================
   retag:
-    needs: [resolve-registry]
+    needs: [resolve-registry, validate-tag]
+    if: |
+      always() &&
+      needs.validate-tag.outputs.valid == 'true'
     uses: zopsmart/zs-workflows/.github/workflows/_retag-image.yaml@main
     with:
       SVC_NAME: ${{ inputs.SVC_NAME }}
@@ -168,8 +216,10 @@ jobs:
   # DEPLOY
   # ============================================================
   deploy:
-    needs: [resolve-deploy, retag]
+    needs: [resolve-deploy, validate-tag, retag, check-changes]
     if: |
+      always() &&
+      needs.validate-tag.outputs.valid == 'true' &&
       needs.retag.outputs.tag_exists == 'true' &&
       needs.resolve-deploy.outputs.cluster_name != ''
     uses: zopsmart/zs-workflows/.github/workflows/_deploy.yaml@main
@@ -186,32 +236,7 @@ jobs:
       DEPLOY_METHOD: ${{ inputs.DEPLOY_METHOD }}
       HELM_VALUES_PATH: ${{ inputs.HELM_VALUES_PATH }}
       APP_VERSION: ${{ github.ref_name }}
+      CONFIGMAP_ARTIFACT: ${{ needs.check-changes.outputs.configmap_artifact }}
     secrets:
       CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS }}
       PAT: ${{ secrets.PAT }}
-
-  # ============================================================
-  # UPDATE CONFIGMAP
-  # ============================================================
-  update-configmap:
-    needs: [resolve-deploy, retag, deploy]
-    if: |
-      always() &&
-      needs.retag.outputs.tag_exists == 'true' &&
-      needs.deploy.result == 'success' &&
-      needs.resolve-deploy.outputs.env_file_path != '' &&
-      needs.resolve-deploy.outputs.cluster_name != ''
-    uses: zopsmart/zs-workflows/.github/workflows/_update-configmap.yaml@main
-    with:
-      SVC_NAME: ${{ inputs.SVC_NAME }}
-      NAMESPACE: ${{ needs.resolve-deploy.outputs.namespace }}
-      ENV_FILE_PATH: ${{ needs.resolve-deploy.outputs.env_file_path }}
-      ENVIRONMENT: prod
-      CLUSTER_PROJECT: ${{ needs.resolve-deploy.outputs.cluster_project }}
-      CLUSTER_NAME: ${{ needs.resolve-deploy.outputs.cluster_name }}
-      CLUSTER_REGION: ${{ needs.resolve-deploy.outputs.cluster_region }}
-      AZURE_RESOURCE_GROUP: ${{ needs.resolve-deploy.outputs.azure_resource_group }}
-      REACT_APP: ${{ inputs.REACT_APP }}
-      ENV_FILE_PATH_EXPLICIT: ${{ needs.resolve-deploy.outputs.env_file_explicit == 'true' }}
-    secrets:
-      CLUSTER_CREDENTIALS: ${{ secrets.PROD_CLUSTER_CREDENTIALS || secrets.CLUSTER_CREDENTIALS }}

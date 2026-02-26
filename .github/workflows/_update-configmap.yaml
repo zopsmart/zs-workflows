@@ -3,16 +3,12 @@ name: "Update Configmap"
 on:
   workflow_call:
     inputs:
-      SVC_NAME:
-        description: 'Service name (configmap name)'
+      CONFIGMAP_ARTIFACT:
+        description: 'Artifact name containing ConfigMap'
         required: true
         type: string
       NAMESPACE:
         description: 'Kubernetes namespace'
-        required: true
-        type: string
-      ENV_FILE_PATH:
-        description: 'Path to env file'
         required: true
         type: string
       ENVIRONMENT:
@@ -41,17 +37,6 @@ on:
         required: false
         type: string
         default: ''
-      # Configmap options
-      REACT_APP:
-        description: 'Enable React-specific configmap format'
-        required: false
-        type: boolean
-        default: false
-      ENV_FILE_PATH_EXPLICIT:
-        description: 'If true, fail when env file is missing. If false, skip silently.'
-        required: false
-        type: boolean
-        default: false
 
     secrets:
       CLUSTER_CREDENTIALS:
@@ -67,92 +52,18 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Validate env file exists
-        id: validate
-        run: |
-          ENV_FILE_PATH="${{ inputs.ENV_FILE_PATH }}"
-          EXPLICIT="${{ inputs.ENV_FILE_PATH_EXPLICIT }}"
-
-          if [[ -z "$ENV_FILE_PATH" ]]; then
-            echo "ENV_FILE_PATH is empty, skipping configmap update"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [[ ! -f "$ENV_FILE_PATH" ]]; then
-            if [[ "$EXPLICIT" == "true" ]]; then
-              echo "ERROR: Env file not found at $ENV_FILE_PATH"
-              echo "When ENV_FILE_PATH is explicitly set, the file must exist."
-              exit 1
-            else
-              echo "Env file not found at $ENV_FILE_PATH, skipping configmap update"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          fi
-
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-        shell: bash
-
       - name: Authenticate to cluster
-        if: steps.validate.outputs.skip != 'true'
         uses: ./.github/actions/cluster-auth
         with:
-          environment: ${{ inputs.ENVIRONMENT || inputs.NAMESPACE }}
+          environment: ${{ inputs.ENVIRONMENT }}
           credentials: ${{ secrets.CLUSTER_CREDENTIALS }}
           cluster_name: ${{ inputs.CLUSTER_NAME }}
           cluster_region: ${{ inputs.CLUSTER_REGION }}
           cluster_project: ${{ inputs.CLUSTER_PROJECT }}
           azure_resource_group: ${{ inputs.AZURE_RESOURCE_GROUP }}
 
-      - name: Generate ConfigMap YAML
-        if: steps.validate.outputs.skip != 'true'
-        run: |
-          CONFIG_MAP_NAME="${{ inputs.SVC_NAME }}"
-          ENV_FILE_PATH="${{ inputs.ENV_FILE_PATH }}"
-          REACT_APP="${{ inputs.REACT_APP }}"
-
-          # Create an associative array to store key-value pairs
-          declare -A envArray
-
-          # Read each line in .env and extract key-value pairs
-          while IFS= read -r line || [[ -n "$line" ]]; do
-            # Skip empty lines and comments
-            if [[ -z "$line" || "${line:0:1}" == "#" ]]; then
-              continue
-            fi
-            key=$(echo "$line" | cut -d '=' -f 1)
-            value=$(echo "$line" | cut -d '=' -f 2-)
-            envArray["$key"]=$value
-          done < "$ENV_FILE_PATH"
-
-          # Create ConfigMap YAML header
-          echo "apiVersion: v1" > "${CONFIG_MAP_NAME}.yaml"
-          echo "kind: ConfigMap" >> "${CONFIG_MAP_NAME}.yaml"
-          echo "metadata:" >> "${CONFIG_MAP_NAME}.yaml"
-          echo "  name: ${CONFIG_MAP_NAME}" >> "${CONFIG_MAP_NAME}.yaml"
-          echo "data:" >> "${CONFIG_MAP_NAME}.yaml"
-
-          if [[ "$REACT_APP" == "true" ]]; then
-            # React app format: environment.js with window.env object
-            echo "  environment.js: |" >> "${CONFIG_MAP_NAME}.yaml"
-            echo "    if (typeof window !== 'undefined')" >> "${CONFIG_MAP_NAME}.yaml"
-            echo "    window.env = {" >> "${CONFIG_MAP_NAME}.yaml"
-            for key in "${!envArray[@]}"; do
-              echo "      $key: \"${envArray[$key]}\"," >> "${CONFIG_MAP_NAME}.yaml"
-            done
-            echo "    }" >> "${CONFIG_MAP_NAME}.yaml"
-          else
-            # Standard configmap format
-            for key in "${!envArray[@]}"; do
-              echo "  $key: ${envArray[$key]}" >> "${CONFIG_MAP_NAME}.yaml"
-            done
-          fi
-
-          echo "Generated ConfigMap:"
-          cat "${CONFIG_MAP_NAME}.yaml"
-        shell: bash
-
       - name: Apply ConfigMap
-        if: steps.validate.outputs.skip != 'true'
-        run: kubectl apply --force -f ${{ inputs.SVC_NAME }}.yaml -n ${{ inputs.NAMESPACE }}
+        uses: ./.github/actions/apply-configmap
+        with:
+          artifact_name: ${{ inputs.CONFIGMAP_ARTIFACT }}
+          namespace: ${{ inputs.NAMESPACE }}
