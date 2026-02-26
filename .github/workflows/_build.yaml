@@ -133,72 +133,38 @@ jobs:
       # ============================================================
       # GO SETUP
       # ============================================================
-      - name: Setup Go
+      - name: Setup and Build Go
         if: inputs.LANGUAGE == 'go'
-        uses: actions/setup-go@v6
+        uses: ./.github/actions/setup-go
         with:
-          go-version: ${{ inputs.RUNTIME_VERSION || '1.20' }}
-
-      - name: Get Go dependencies
-        if: inputs.LANGUAGE == 'go'
-        run: |
-          git config --global url."https://${{ secrets.PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-          git config --global http.sslVerify false
-          go mod download
-
-      - name: Extra Go dependencies
-        if: inputs.LANGUAGE == 'go' && inputs.EXTRA_DEPENDENCIES
-        run: ${{ inputs.DEPENDENCIES_COMMAND }}
-
-      - name: Make build directory
-        if: inputs.LANGUAGE == 'go'
-        run: mkdir -p build
-
-      - name: Build Go
-        if: inputs.LANGUAGE == 'go'
-        run: |
-          directory=$(pwd)
-          cd ${{ inputs.DOCKER_FILE_PATH }}
-          ${{ inputs.BUILD_COMMAND }}
-          if [ "${{ inputs.DOCKER_FILE_PATH }}" != "." ]; then
-            mv ${{ inputs.ARTIFACT_PATH }} "$directory"
-          fi
+          go_version: ${{ inputs.RUNTIME_VERSION || '1.20' }}
+          build_command: ${{ inputs.BUILD_COMMAND }}
+          docker_file_path: ${{ inputs.DOCKER_FILE_PATH }}
+          artifact_path: ${{ inputs.ARTIFACT_PATH }}
+          extra_dependencies: ${{ inputs.EXTRA_DEPENDENCIES }}
+          dependencies_command: ${{ inputs.DEPENDENCIES_COMMAND }}
+          pat: ${{ secrets.PAT }}
 
       # ============================================================
       # NODE SETUP
       # ============================================================
-      - name: Setup Node
+      - name: Setup and Build Node
         if: inputs.LANGUAGE == 'node'
-        uses: actions/setup-node@v6
+        uses: ./.github/actions/setup-node
         with:
-          node-version: ${{ inputs.RUNTIME_VERSION || '18' }}
-
-      - name: Configure npm registry
-        if: inputs.LANGUAGE == 'node'
-        run: |
-          echo "@zopsmart:registry=https://npm.pkg.github.com/" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-
-      - name: Install Node dependencies
-        if: inputs.LANGUAGE == 'node'
-        run: yarn install ${{ inputs.DEPENDENCIES_FLAG }}
-
-      - name: Build Node
-        if: inputs.LANGUAGE == 'node'
-        run: ${{ inputs.BUILD_COMMAND }}
+          node_version: ${{ inputs.RUNTIME_VERSION || '18' }}
+          build_command: ${{ inputs.BUILD_COMMAND }}
+          dependencies_flag: ${{ inputs.DEPENDENCIES_FLAG }}
+          npm_token: ${{ secrets.NPM_TOKEN }}
 
       # ============================================================
       # GENERIC SETUP
       # ============================================================
-      - name: Log warning for generic build
-        if: inputs.LANGUAGE == 'generic'
-        run: |
-          echo "::warning::Generic build mode - skipping language-specific dependency setup."
-          echo "If your build fails, specify LANGUAGE explicitly (go or node)."
-
       - name: Build Generic
         if: inputs.LANGUAGE == 'generic'
+        shell: bash
         run: |
+          echo "::warning::Generic build mode - skipping language-specific dependency setup."
           cd ${{ inputs.DOCKER_FILE_PATH }}
           ${{ inputs.BUILD_COMMAND }}
 

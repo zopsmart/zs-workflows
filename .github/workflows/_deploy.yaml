@@ -83,7 +83,7 @@ jobs:
       - name: Authenticate to cluster
         uses: ./.github/actions/cluster-auth
         with:
-          environment: ${{ inputs.ENVIRONMENT || inputs.NAMESPACE }}
+          environment: ${{ inputs.ENVIRONMENT }}
           credentials: ${{ secrets.CLUSTER_CREDENTIALS }}
           cluster_name: ${{ inputs.CLUSTER_NAME }}
           cluster_region: ${{ inputs.CLUSTER_REGION }}
